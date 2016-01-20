@@ -22,16 +22,15 @@ type Param struct {
 }
 
 type Route struct {
+	Method   string
+	Path     string
 	Params   []Param
-	Response string
+	Response interface{}
 }
 
 type Router struct {
-	Path string
-	Get  Route
-	Post Route
-	Put  Route
-	Del  Route
+	Resource string
+	Routes   []Route
 }
 
 func newRouter(apiPath string) (r *Router, err error) {

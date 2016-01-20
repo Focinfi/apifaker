@@ -1,1 +1,7 @@
-{"Path":"books","Get":{"Params":[{"Name":"id","Desc":"book's id"}],"Response":"xxx"},"Post":{"Params":null,"Response":""},"Put":{"Params":null,"Response":""},"Del":{"Params":null,"Response":"[{'title':'The Litle Prince'}]"}}
+{ 
+  "Resource":"books",
+  "Routes":[
+    {"Method":"GET","Path":"/book/:id","Params":[{"name":"id", "desc":"Book's id"}],"Response":{"title":"The Litle Prince"}},
+    {"Method":"GET","Path":"/books","Params":[{"name":"id", "desc":"Book's id"}],"Response":[{"title":"The Litle Prince"}, {"title":"The Litle Prince"}]}
+  ]
+}

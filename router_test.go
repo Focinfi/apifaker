@@ -9,12 +9,14 @@ import (
 )
 
 var tempRouter = Router{
-	Path: "/books",
-	Get: Route{
-		Params: []Param{
-			Param{"id", "book's id"},
+	Resource: "books",
+	Routes: []Route{
+		{
+			Method:   "GET",
+			Path:     "/:id",
+			Params:   []Param{},
+			Response: `xxx`,
 		},
-		Response: `xxx`,
 	},
 }
 
@@ -30,7 +32,7 @@ func TestNewRouter(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-			if r.Get.Params[0].Name != "id" || r.Get.Params[0].Desc != "book's id" || r.Get.Response != "xxx" {
+			if len(r.Routes) == 0 {
 				t.Errorf("can not create a new router, result is: %#v", r)
 			}
 		} else {

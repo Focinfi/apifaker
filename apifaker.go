@@ -1,7 +1,7 @@
 package apifaker
 
 import (
-	// "fmt"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"os"
@@ -33,9 +33,39 @@ func NewWithApiDir(dir string) (*ApiFaker, error) {
 		return err
 	})
 
+	if err == nil {
+		faker.setHandlers()
+	}
 	return &faker, err
 }
 
+func (af *ApiFaker) setHandlers() {
+	for _, router := range af.Routers {
+		for _, route := range router.Routes {
+			method := strings.ToUpper(route.Method)
+			switch method {
+			case "GET":
+				fmt.Printf("[Route] %#v\n", route)
+				af.GET(route.Path, func(ctx *gin.Context) {
+					ctx.JSON(http.StatusOK, gin.H{"data": route.Response})
+				})
+			case "POST":
+				af.POST(route.Path, func(ctx *gin.Context) {
+					ctx.JSON(http.StatusOK, gin.H{"data": route.Response})
+				})
+			case "PUT":
+				af.PUT(route.Path, func(ctx *gin.Context) {
+					ctx.JSON(http.StatusOK, gin.H{"data": route.Response})
+				})
+			case "DELETE":
+				af.DELETE(route.Path, func(ctx *gin.Context) {
+					ctx.JSON(http.StatusOK, gin.H{"data": route.Response})
+				})
+			}
+		}
+	}
+}
+
 func (af *ApiFaker) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	af.ServeHTTP(rw, req)
+	af.Engine.ServeHTTP(rw, req)
 }
