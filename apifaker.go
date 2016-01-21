@@ -9,13 +9,26 @@ import (
 )
 
 type ApiFaker struct {
+	// Engine composing pointer of gin.Engine to let ApiFaker
+	// has the ability of routing
 	*gin.Engine
-	ApiDir  string
+
+	// ApiDir the directory contains api json files
+	ApiDir string
+
+	// Routers a array of pointer of Router
 	Routers []*Router
+
+	// TrueMux external mux for the real api
 	TrueMux http.Handler
-	Prefix  string
+
+	// Prefix the prefix of fake apis
+	Prefix string
 }
 
+// NewWithApiDir create a new ApiFaker with the ApiDir,
+// returns the pointer of ApiFaker and error will not be nil if
+// there are some errors of manipulating ApiDir or json.Unmarshal
 func NewWithApiDir(dir string) (*ApiFaker, error) {
 	faker := &ApiFaker{Engine: gin.Default(), ApiDir: dir, Routers: []*Router{}}
 	err := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
@@ -36,6 +49,9 @@ func NewWithApiDir(dir string) (*ApiFaker, error) {
 	return faker, err
 }
 
+// ServeHTTP serve the req and write response to rw.
+// It will use gin.Engine when req.URL.Path hasing prefix of af.Prefix
+// otherwise it will call af.TrueMux.ServeHTTP()
 func (af *ApiFaker) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	path := req.URL.Path
 	if af.Prefix != "" && strings.HasPrefix(path, af.Prefix+"/") {
@@ -45,12 +61,16 @@ func (af *ApiFaker) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// MountTo assign path as af's Prefix and assign handler as af's TrueMux.
+// At same time set hte handlers for af
 func (af *ApiFaker) MountTo(path string, handler http.Handler) {
 	af.Prefix = path
 	af.setHandlers(path)
 	af.TrueMux = handler
 }
 
+// setHandlers set all handlers into af.Engine.
+// It will panic when there are has repeat combination of route.Method and route.Path
 func (af *ApiFaker) setHandlers(prefix string) {
 	for _, router := range af.Routers {
 		for _, route := range router.Routes {

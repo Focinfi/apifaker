@@ -17,14 +17,23 @@ const (
 )
 
 type Param struct {
+	// Name request parameter' name
 	Name string
+	// Desc description of this parameter
 	Desc string
 }
 
 type Route struct {
-	Method   string
-	Path     string
-	Params   []Param
+	// Method request method only support "GET", "POST", "PUT", "DELETE"
+	Method string
+
+	// Path path of request's url
+	Path string
+
+	// Params array of this route
+	Params []Param
+
+	// Response a object of any thing can be json.Marshal
 	Response interface{}
 }
 
@@ -33,6 +42,7 @@ type Router struct {
 	Routes   []Route
 }
 
+// newRouter create a new Router with reading a json file
 func newRouter(apiPath string) (r *Router, err error) {
 	file, err := os.Open(apiPath)
 	if err != nil {

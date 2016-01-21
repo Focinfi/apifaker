@@ -2,6 +2,7 @@ package apifaker
 
 import (
 	"github.com/Focinfi/gtester"
+	"github.com/Focinfi/gtester/httpmock"
 	"net/http"
 	"os"
 	"testing"
@@ -26,15 +27,13 @@ func TestSetHandlers(t *testing.T) {
 	})
 
 	faker.MountTo("/fake_api", mux)
-	gtester.ListenAndServe("localhost", faker)
-	response := gtester.NewRecorder()
+	httpmock.ListenAndServe("localhost", faker)
 
-	gtester.Get("/greet", response)
+	response := httpmock.GET("/greet", nil)
 	gtester.AssertEqual(t, response.Body.String(), "hello world")
 
-	response = gtester.NewRecorder()
-	gtester.Get("/fake_api/user/1", response)
+	response = httpmock.GET("/fake_api/user/1", nil)
 	gtester.AssertEqual(t, response.Code, http.StatusOK)
 	expResp := map[string]map[string]string{"data": map[string]string{"name": "Frank"}}
-	gtester.AssertJsonEqual(t, response, expResp)
+	gtester.AssertResponseEqual(t, response, expResp)
 }
