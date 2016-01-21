@@ -10,10 +10,10 @@ No need of database, just create some json file, and write two line codes, then,
 `go get github.com/Focinfi/apifaker`
 
 ### Usage
-
+----
 #### fake_apis directory
 
-You need a make a directory to contains the api json files
+`apifaker` need a directory to contains the api json files
 
 #### Add api files
 
@@ -56,16 +56,17 @@ Herer is an example:
 #### Creat a apifaker
 
 ```go
-  fakeApi := apifaker.NewWithApiDir("/path/to/your/fake_apis")
+  // if there are any errors of directory or json file format, err will not be nil
+  fakeApi, err := apifaker.NewWithApiDir("/path/to/your/fake_apis")
 ```
 
-And you can use it as a http.Handler to listen and serve on port:
+And you can use it as a http.Handler to listen and serve on a port:
 
 ```go
   http.ListenAndServe("localhost:3000", fakeApi)
 ```
 
-Know everthing is done, you can visit localhost:3000/users and localhost:3000/user/1 to the json response.
+Now almost everthing is done, you can visit localhost:3000/users and localhost:3000/user/1 to get the json response.
 
 #### Mount to other mutex
 
@@ -82,7 +83,7 @@ Also, you can compose other mutex which implemneted `http.Handler` to the fakeAp
   http.ListenAndServe("localhost:3000", fakeApi)
 ```
 
-Then, `/greet` will be available.
+Then, `/greet` will be available, at the same time, `/users` and `/user/1` changed to be `/fake_api/users` and `/fake_api/user/1`
 
 
 
