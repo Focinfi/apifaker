@@ -1,7 +1,0 @@
-{ 
-  "Resource":"books",
-  "Routes":[
-    {"Method":"GET","Path":"/book/:id","Params":[{"name":"id", "desc":"Book's id"}],"Response":{"title":"The Litle Prince"}},
-    {"Method":"GET","Path":"/books","Params":[{"name":"id", "desc":"Book's id"}],"Response":[{"title":"The Litle Prince"}, {"title":"The Litle Prince"}]}
-  ]
-}

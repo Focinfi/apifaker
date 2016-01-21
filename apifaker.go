@@ -12,6 +12,8 @@ type ApiFaker struct {
 	*gin.Engine
 	ApiDir  string
 	Routers []*Router
+	TrueMux http.Handler
+	Prefix  string
 }
 
 func NewWithApiDir(dir string) (*ApiFaker, error) {
@@ -31,40 +33,48 @@ func NewWithApiDir(dir string) (*ApiFaker, error) {
 		}
 		return err
 	})
-
-	if err == nil {
-		faker.setHandlers()
-	}
 	return faker, err
 }
 
-func (af *ApiFaker) setHandlers() {
+func (af *ApiFaker) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	path := req.URL.Path
+	if af.Prefix != "" && strings.HasPrefix(path, af.Prefix+"/") {
+		af.Engine.ServeHTTP(rw, req)
+	} else {
+		af.TrueMux.ServeHTTP(rw, req)
+	}
+}
+
+func (af *ApiFaker) MountTo(path string, handler http.Handler) {
+	af.Prefix = path
+	af.setHandlers(path)
+	af.TrueMux = handler
+}
+
+func (af *ApiFaker) setHandlers(prefix string) {
 	for _, router := range af.Routers {
 		for _, route := range router.Routes {
 			method := strings.ToUpper(route.Method)
 			response := route.Response
+			path := prefix + route.Path
 			switch method {
 			case "GET":
-				af.GET(route.Path, func(ctx *gin.Context) {
+				af.GET(path, func(ctx *gin.Context) {
 					ctx.JSON(http.StatusOK, gin.H{"data": response})
 				})
 			case "POST":
-				af.POST(route.Path, func(ctx *gin.Context) {
+				af.POST(path, func(ctx *gin.Context) {
 					ctx.JSON(http.StatusOK, gin.H{"data": response})
 				})
 			case "PUT":
-				af.PUT(route.Path, func(ctx *gin.Context) {
+				af.PUT(path, func(ctx *gin.Context) {
 					ctx.JSON(http.StatusOK, gin.H{"data": response})
 				})
 			case "DELETE":
-				af.DELETE(route.Path, func(ctx *gin.Context) {
+				af.DELETE(path, func(ctx *gin.Context) {
 					ctx.JSON(http.StatusOK, gin.H{"data": response})
 				})
 			}
 		}
 	}
-}
-
-func (af *ApiFaker) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	af.Engine.ServeHTTP(rw, req)
 }
