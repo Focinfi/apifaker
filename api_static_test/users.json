@@ -1,0 +1,7 @@
+{ 
+  "Resource":"users",
+  "Routes":[
+    {"Method":"GET","Path":"/user/:id","Params":[{"name":"id", "desc":"User's id"}],"Response":{"name":"Frank"}},
+      {"Method":"GET","Path":"/users","Params":[{"name":"id", "desc":"User's id"}],"Response":[{"name":"Frank"},{"name":"Frank"}]}
+  ]
+}

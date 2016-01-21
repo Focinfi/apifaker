@@ -1,7 +1,6 @@
 package apifaker
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"os"
@@ -16,7 +15,7 @@ type ApiFaker struct {
 }
 
 func NewWithApiDir(dir string) (*ApiFaker, error) {
-	faker := ApiFaker{Engine: gin.Default(), ApiDir: dir, Routers: []*Router{}}
+	faker := &ApiFaker{Engine: gin.Default(), ApiDir: dir, Routers: []*Router{}}
 	err := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
 		if f == nil {
 			return err
@@ -36,30 +35,30 @@ func NewWithApiDir(dir string) (*ApiFaker, error) {
 	if err == nil {
 		faker.setHandlers()
 	}
-	return &faker, err
+	return faker, err
 }
 
 func (af *ApiFaker) setHandlers() {
 	for _, router := range af.Routers {
 		for _, route := range router.Routes {
 			method := strings.ToUpper(route.Method)
+			response := route.Response
 			switch method {
 			case "GET":
-				fmt.Printf("[Route] %#v\n", route)
 				af.GET(route.Path, func(ctx *gin.Context) {
-					ctx.JSON(http.StatusOK, gin.H{"data": route.Response})
+					ctx.JSON(http.StatusOK, gin.H{"data": response})
 				})
 			case "POST":
 				af.POST(route.Path, func(ctx *gin.Context) {
-					ctx.JSON(http.StatusOK, gin.H{"data": route.Response})
+					ctx.JSON(http.StatusOK, gin.H{"data": response})
 				})
 			case "PUT":
 				af.PUT(route.Path, func(ctx *gin.Context) {
-					ctx.JSON(http.StatusOK, gin.H{"data": route.Response})
+					ctx.JSON(http.StatusOK, gin.H{"data": response})
 				})
 			case "DELETE":
 				af.DELETE(route.Path, func(ctx *gin.Context) {
-					ctx.JSON(http.StatusOK, gin.H{"data": route.Response})
+					ctx.JSON(http.StatusOK, gin.H{"data": response})
 				})
 			}
 		}
