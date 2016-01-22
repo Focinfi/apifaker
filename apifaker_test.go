@@ -20,6 +20,14 @@ func TestNewWithApiDir(t *testing.T) {
 
 func TestSetHandlers(t *testing.T) {
 	faker, _ := NewWithApiDir(pwd + "/api_static_test")
+	httpmock.ListenAndServe("localhost", faker)
+	response := httpmock.GET("/user/1", nil)
+	expResp := map[string]map[string]string{"data": map[string]string{"name": "Frank"}}
+	gtester.AssertResponseEqual(t, response, expResp)
+}
+
+func TestMountTo(t *testing.T) {
+	faker, _ := NewWithApiDir(pwd + "/api_static_test")
 	mux := http.NewServeMux()
 	mux.HandleFunc("/greet", func(rw http.ResponseWriter, req *http.Request) {
 		rw.WriteHeader(http.StatusOK)

@@ -46,6 +46,10 @@ func NewWithApiDir(dir string) (*ApiFaker, error) {
 		}
 		return err
 	})
+
+	if err == nil {
+		faker.setHandlers("")
+	}
 	return faker, err
 }
 
@@ -54,10 +58,12 @@ func NewWithApiDir(dir string) (*ApiFaker, error) {
 // otherwise it will call af.TrueMux.ServeHTTP()
 func (af *ApiFaker) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	path := req.URL.Path
-	if af.Prefix != "" && strings.HasPrefix(path, af.Prefix+"/") {
+	if af.Prefix == "" || strings.HasPrefix(path, af.Prefix+"/") {
 		af.Engine.ServeHTTP(rw, req)
 	} else {
-		af.TrueMux.ServeHTTP(rw, req)
+		if af.TrueMux != nil {
+			af.TrueMux.ServeHTTP(rw, req)
+		}
 	}
 }
 
@@ -65,6 +71,7 @@ func (af *ApiFaker) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 // At same time set hte handlers for af
 func (af *ApiFaker) MountTo(path string, handler http.Handler) {
 	af.Prefix = path
+	af.Engine = gin.Default()
 	af.setHandlers(path)
 	af.TrueMux = handler
 }
