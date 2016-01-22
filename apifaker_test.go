@@ -22,7 +22,7 @@ func TestSetHandlers(t *testing.T) {
 	faker, _ := NewWithApiDir(pwd + "/api_static_test")
 	httpmock.ListenAndServe("localhost", faker)
 	response := httpmock.GET("/user/1", nil)
-	expResp := map[string]map[string]string{"data": map[string]string{"name": "Frank"}}
+	expResp := map[string]string{"name": "Frank"}
 	gtester.AssertResponseEqual(t, response, expResp)
 }
 
@@ -42,6 +42,6 @@ func TestMountTo(t *testing.T) {
 
 	response = httpmock.GET("/fake_api/user/1", nil)
 	gtester.AssertEqual(t, response.Code, http.StatusOK)
-	expResp := map[string]map[string]string{"data": map[string]string{"name": "Frank"}}
+	expResp := map[string]string{"name": "Frank"}
 	gtester.AssertResponseEqual(t, response, expResp)
 }

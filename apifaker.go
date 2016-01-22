@@ -87,19 +87,19 @@ func (af *ApiFaker) setHandlers(prefix string) {
 			switch method {
 			case "GET":
 				af.GET(path, func(ctx *gin.Context) {
-					ctx.JSON(http.StatusOK, gin.H{"data": response})
+					ctx.JSON(http.StatusOK, response)
 				})
 			case "POST":
 				af.POST(path, func(ctx *gin.Context) {
-					ctx.JSON(http.StatusOK, gin.H{"data": response})
+					ctx.JSON(http.StatusOK, response)
 				})
 			case "PUT":
 				af.PUT(path, func(ctx *gin.Context) {
-					ctx.JSON(http.StatusOK, gin.H{"data": response})
+					ctx.JSON(http.StatusOK, response)
 				})
 			case "DELETE":
 				af.DELETE(path, func(ctx *gin.Context) {
-					ctx.JSON(http.StatusOK, gin.H{"data": response})
+					ctx.JSON(http.StatusOK, response)
 				})
 			}
 		}
