@@ -18,28 +18,30 @@ const (
 
 type Param struct {
 	// Name request parameter' name
-	Name string
+	Name string `json:"name"`
 	// Desc description of this parameter
-	Desc string
+	Desc string `json:"desc"`
 }
 
 type Route struct {
 	// Method request method only support "GET", "POST", "PUT", "DELETE"
-	Method string
+	Method string `json:"method"`
 
 	// Path path of request's url
-	Path string
+	Path string `json:"path"`
 
 	// Params array of this route
-	Params []Param
+	Params []Param `json:"params"`
 
 	// Response a object of any thing can be json.Marshal
-	Response interface{}
+	Response interface{} `json:"response"`
 }
 
 type Router struct {
-	Resource string
-	Routes   []Route
+	Resource string  `json:"resource"`
+	Routes   []Route `json:"routes"`
+
+	filePath string `json:"-"`
 }
 
 // newRouter create a new Router with reading a json file
@@ -54,7 +56,7 @@ func newRouter(apiPath string) (r *Router, err error) {
 	if err != nil {
 		return
 	}
-	r = &Router{}
+	r = &Router{filePath: apiPath}
 	if err = json.Unmarshal(bytes, r); err != nil {
 		err = fmt.Errorf("[apifaker] json format error: %s, file: %s", err.Error(), apiPath)
 	}

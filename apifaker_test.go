@@ -8,18 +8,18 @@ import (
 	"testing"
 )
 
-var pwd, _ = os.Getwd()
+var testDir = os.Getenv("GOPATH") + "/src/github.com/Focinfi/apifaker/api_static_test"
 
 func TestNewWithApiDir(t *testing.T) {
-	if faker, err := NewWithApiDir(pwd + "/api_static_test"); err != nil {
+	if faker, err := NewWithApiDir(testDir); err != nil {
 		t.Error(err)
 	} else {
-		t.Logf("%#v", faker.Routers)
+		t.Logf("%#v", faker.Routers[0])
 	}
 }
 
 func TestSetHandlers(t *testing.T) {
-	faker, _ := NewWithApiDir(pwd + "/api_static_test")
+	faker, _ := NewWithApiDir(testDir)
 	httpmock.ListenAndServe("localhost", faker)
 	response := httpmock.GET("/user/1", nil)
 	expResp := map[string]string{"name": "Frank"}
@@ -27,7 +27,7 @@ func TestSetHandlers(t *testing.T) {
 }
 
 func TestMountTo(t *testing.T) {
-	faker, _ := NewWithApiDir(pwd + "/api_static_test")
+	faker, _ := NewWithApiDir(testDir)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/greet", func(rw http.ResponseWriter, req *http.Request) {
 		rw.WriteHeader(http.StatusOK)

@@ -1,24 +1,24 @@
 {
-    "Resource": "users",
-    "Routes": [
+    "resource": "users",
+    "routes": [
         {
-            "Method": "GET",
-            "Path": "/user/:id",
-            "Params": [
+            "method": "GET",
+            "path": "/user/:id",
+            "params": [
                 {
                     "name": "id",
                     "desc": "User's id"
                 }
             ],
-            "Response": {
+            "response": {
                 "name": "Frank"
             }
         },
         {
-            "Method": "GET",
-            "Path": "/users",
-            "Params": [],
-            "Response": [
+            "method": "GET",
+            "path": "/users",
+            "params": [],
+            "response": [
                 {
                     "name": "Frank"
                 },
