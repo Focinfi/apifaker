@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -40,7 +41,7 @@ func NewWithApiDir(dir string) (*ApiFaker, error) {
 		}
 		var router *Router
 		if strings.HasSuffix(path, ".json") {
-			if router, err = newRouter(path); err == nil {
+			if router, err = NewRouterWithPath(path); err == nil {
 				faker.Routers = append(faker.Routers, router)
 			}
 		}
@@ -81,25 +82,38 @@ func (af *ApiFaker) MountTo(path string, handler http.Handler) {
 func (af *ApiFaker) setHandlers(prefix string) {
 	for _, router := range af.Routers {
 		for _, route := range router.Routes {
-			method := strings.ToUpper(route.Method)
-			response := route.Response
+			method := route.Method
+			resource := router.Resource
 			path := prefix + route.Path
 			switch method {
-			case "GET":
+			case GET:
 				af.GET(path, func(ctx *gin.Context) {
-					ctx.JSON(http.StatusOK, response)
+					idStr := ctx.Param("id")
+					if id, err := strconv.Atoi(idStr); err != nil {
+						ctx.JSON(http.StatusOK, resource.Set.ToSlice())
+					} else {
+						if item, ok := resource.Get(id); ok {
+							ctx.JSON(http.StatusOK, item)
+						} else {
+							ctx.JSON(http.StatusNotFound, nil)
+						}
+					}
 				})
-			case "POST":
+			case POST:
 				af.POST(path, func(ctx *gin.Context) {
-					ctx.JSON(http.StatusOK, response)
+					ctx.JSON(http.StatusOK, resource.Set.ToSlice())
 				})
-			case "PUT":
+			case PUT:
 				af.PUT(path, func(ctx *gin.Context) {
-					ctx.JSON(http.StatusOK, response)
+					ctx.JSON(http.StatusOK, resource.Set.ToSlice())
 				})
-			case "DELETE":
+			case PATCH:
+				af.PATCH(path, func(ctx *gin.Context) {
+					ctx.JSON(http.StatusOK, resource.Set.ToSlice())
+				})
+			case DELETE:
 				af.DELETE(path, func(ctx *gin.Context) {
-					ctx.JSON(http.StatusOK, response)
+					ctx.JSON(http.StatusOK, nil)
 				})
 			}
 		}

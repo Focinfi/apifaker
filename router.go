@@ -1,10 +1,7 @@
 package apifaker
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"os"
 )
 
 type RestMethod int
@@ -13,52 +10,73 @@ const (
 	GET RestMethod = 1 << (10 * iota)
 	POST
 	PUT
+	PATCH
 	DELETE
 )
 
-type Param struct {
-	// Name request parameter' name
-	Name string `json:"name"`
-	// Desc description of this parameter
-	Desc string `json:"desc"`
+func (r RestMethod) String() string {
+	switch r {
+	case GET:
+		return "GET"
+	case POST:
+		return "POST"
+	case PUT:
+		return "PUT"
+	case PATCH:
+		return "PATCH"
+	case DELETE:
+		return "DELETE"
+	default:
+		return ""
+	}
+	return ""
 }
 
 type Route struct {
-	// Method request method only support "GET", "POST", "PUT", "DELETE"
-	Method string `json:"method"`
+	// Method request method only support GET, POST, PUT, PATCH, DELETE
+	Method RestMethod
 
-	// Path path of request's url
-	Path string `json:"path"`
-
-	// Params array of this route
-	Params []Param `json:"params"`
-
-	// Response a object of any thing can be json.Marshal
-	Response interface{} `json:"response"`
+	// Path
+	Path string
 }
 
 type Router struct {
-	Resource string  `json:"resource"`
-	Routes   []Route `json:"routes"`
+	*Resource
+	Routes []Route
 
 	filePath string `json:"-"`
 }
 
-// newRouter create a new Router with reading a json file
-func newRouter(apiPath string) (r *Router, err error) {
-	file, err := os.Open(apiPath)
-	if err != nil {
-		return
-	}
-	defer file.Close()
+func (r *Router) setRestRoutes() {
+	r.Routes = []Route{
+		// GET /collection
+		{GET, fmt.Sprintf("/%s", r.Name)},
 
-	bytes, err := ioutil.ReadAll(file)
+		// GET /collection/:id
+		{GET, fmt.Sprintf("/%s/:id", r.Name)},
+
+		// POST /collection
+		{POST, fmt.Sprintf("/%s", r.Name)},
+
+		// PUT /collection
+		{PUT, fmt.Sprintf("/%s/:id", r.Name)},
+
+		// PATCH /collection
+		{PATCH, fmt.Sprintf("/%s/:id", r.Name)},
+
+		// DELETE /collection
+		{DELETE, fmt.Sprintf("/%s/:id", r.Name)},
+	}
+
+}
+
+func NewRouterWithPath(path string) (*Router, error) {
+	resource, err := NewResourceWithPath(path)
 	if err != nil {
-		return
+		return nil, err
 	}
-	r = &Router{filePath: apiPath}
-	if err = json.Unmarshal(bytes, r); err != nil {
-		err = fmt.Errorf("[apifaker] json format error: %s, file: %s", err.Error(), apiPath)
-	}
-	return
+
+	router := &Router{Resource: resource, filePath: path}
+	router.setRestRoutes()
+	return router, err
 }

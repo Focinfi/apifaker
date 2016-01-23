@@ -1,31 +1,34 @@
 {
-    "resource": "users",
-    "routes": [
+    "resource_name": "users",
+    "cloumns": [
         {
-            "method": "GET",
-            "path": "/user/:id",
-            "params": [
-                {
-                    "name": "id",
-                    "desc": "User's id"
-                }
-            ],
-            "response": {
-                "name": "Frank"
-            }
+            "name": "name",
+            "type": "string"
         },
         {
-            "method": "GET",
-            "path": "/users",
-            "params": [],
-            "response": [
-                {
-                    "name": "Frank"
-                },
-                {
-                    "name": "Frank"
-                }
-            ]
+            "name": "phone",
+            "type": "string"
+        },
+        {
+            "name": "age",
+            "type": "number"
+        }
+    ],
+    "seeds": [
+        {
+            "name": "Frank",
+            "phone": "13213213213",
+            "age": 22
+        },
+        {
+            "name": "Antony",
+            "phone": "13213213211",
+            "age": 22
+        },
+        {
+            "name": "Foci",
+            "phone": "13213213212",
+            "age": 22
         }
     ]
 }
