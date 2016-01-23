@@ -11,7 +11,7 @@ func TestNewResourceWithPath(t *testing.T) {
 		t.Error(err)
 	}
 	gtester.AssertEqual(t, resource.Name, "users")
-	gtester.AssertEqual(t, resource.Set.Length(), 3)
+	gtester.AssertEqual(t, resource.Set.Len(), 3)
 }
 
 func TestCheckColumns(t *testing.T) {

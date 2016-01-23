@@ -24,6 +24,34 @@ func (i Item) Element() interface{} {
 	return i["id"]
 }
 
+type Items []Item
+
+func NewItemsFromInterfaces(elements []interface{}) Items {
+	items := []Item{}
+	for _, element := range elements {
+		if item, ok := element.(Item); ok {
+			items = append(items[:], item)
+		}
+	}
+	return Items(items)
+}
+
+func (items Items) Len() int {
+	return len(items)
+}
+
+func (items Items) Less(i, j int) bool {
+	itemFirstId := items[i]["id"].(int)
+	itemSecondId := items[j]["id"].(int)
+	return itemFirstId < itemSecondId
+}
+
+func (items Items) Swap(i, j int) {
+	tmpItem := items[i]
+	items[i] = items[j]
+	items[j] = tmpItem
+}
+
 type Resource struct {
 	Name  string                   `json:"resource_name"`
 	Seeds []map[string]interface{} `json:"seeds"`
@@ -118,6 +146,13 @@ func NewResourceWithPath(path string) (r *Resource, err error) {
 	return
 }
 
-// func NewResourceWithGinContext(ctx *gin.Context) (*Resource, error) {
+// func NewResourceWithGinContext(ctx *gin.Context, r Router) (*Resource, error) {
+// 	// ctx.PostForm()
+// 	item := Item{}
 
+// 	for _, column := range r.Cloumns {
+// 		// column.Name
+// 	}
+
+// 	return nil, nil
 // }

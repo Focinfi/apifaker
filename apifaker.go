@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -90,7 +91,9 @@ func (af *ApiFaker) setHandlers(prefix string) {
 				af.GET(path, func(ctx *gin.Context) {
 					idStr := ctx.Param("id")
 					if id, err := strconv.Atoi(idStr); err != nil {
-						ctx.JSON(http.StatusOK, resource.Set.ToSlice())
+						resourceSlice := NewItemsFromInterfaces(resource.Set.ToSlice())
+						sort.Sort(resourceSlice)
+						ctx.JSON(http.StatusOK, resourceSlice)
 					} else {
 						if item, ok := resource.Get(id); ok {
 							ctx.JSON(http.StatusOK, item)

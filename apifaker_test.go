@@ -10,6 +10,12 @@ import (
 
 var testDir = os.Getenv("GOPATH") + "/src/github.com/Focinfi/apifaker/api_static_test"
 
+var usersFixture = []map[string]interface{}{
+	{"id": 1, "name": "Frank", "phone": "13213213213", "age": 22},
+	{"id": 2, "name": "Antony", "phone": "13213213211", "age": 22},
+	{"id": 3, "name": "Foci", "phone": "13213213212", "age": 22},
+}
+
 func TestNewWithApiDir(t *testing.T) {
 	if faker, err := NewWithApiDir(testDir); err != nil {
 		t.Error(err)
@@ -21,9 +27,13 @@ func TestNewWithApiDir(t *testing.T) {
 func TestSetHandlers(t *testing.T) {
 	faker, _ := NewWithApiDir(testDir)
 	httpmock.ListenAndServe("localhost", faker)
+
 	response := httpmock.GET("/users/1", nil)
-	expResp := map[string]interface{}{"id": 1, "name": "Frank", "phone": "13213213213", "age": 22}
-	gtester.AssertResponseEqual(t, response, expResp)
+	gtester.AssertResponseEqual(t, response, usersFixture[0])
+
+	response = httpmock.GET("/users", nil)
+	gtester.AssertResponseEqual(t, response, usersFixture)
+
 }
 
 // func TestMountTo(t *testing.T) {
