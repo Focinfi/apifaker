@@ -59,7 +59,7 @@ func TestSetHandlers(t *testing.T) {
 		t.Errorf("can not set Post handlers, response body is: %s", response.Body.String())
 	}
 
-	gtester.AssertEqual(t, faker.Routers[0].Resource.Set.Has(gset.T(4)), true)
+	gtester.AssertEqual(t, faker.Routers[0].Model.Set.Has(gset.T(4)), true)
 
 	// PATCH /users/:id
 	userEditedAttrPatch := map[string]interface{}{"name": "Vincent"}
@@ -94,7 +94,7 @@ func TestSetHandlers(t *testing.T) {
 	// DELETE /users/:id
 	response = httpmock.DELETE("/users/4", nil)
 	gtester.AssertEqual(t, response.Code, http.StatusOK)
-	gtester.AssertEqual(t, faker.Routers[0].Resource.Has(gset.T(4)), false)
+	gtester.AssertEqual(t, faker.Routers[0].Model.Has(gset.T(4)), false)
 }
 
 func TestMountTo(t *testing.T) {

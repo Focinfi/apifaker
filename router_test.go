@@ -11,6 +11,6 @@ func TestNewRouter(t *testing.T) {
 		t.Error(err)
 	}
 
-	gtester.AssertEqual(t, router.Name, "users")
+	gtester.AssertEqual(t, router.Model.Name, "users")
 	gtester.AssertEqual(t, router.filePath, testDir+"/users.json")
 }

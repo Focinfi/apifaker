@@ -41,7 +41,7 @@ type Route struct {
 }
 
 type Router struct {
-	*Resource
+	Model  *Model
 	Routes []Route
 
 	filePath string `json:"-"`
@@ -50,33 +50,33 @@ type Router struct {
 func (r *Router) setRestRoutes() {
 	r.Routes = []Route{
 		// GET /collection
-		{GET, fmt.Sprintf("/%s", r.Name)},
+		{GET, fmt.Sprintf("/%s", r.Model.Name)},
 
 		// GET /collection/:id
-		{GET, fmt.Sprintf("/%s/:id", r.Name)},
+		{GET, fmt.Sprintf("/%s/:id", r.Model.Name)},
 
 		// POST /collection
-		{POST, fmt.Sprintf("/%s", r.Name)},
+		{POST, fmt.Sprintf("/%s", r.Model.Name)},
 
 		// PUT /collection
-		{PUT, fmt.Sprintf("/%s/:id", r.Name)},
+		{PUT, fmt.Sprintf("/%s/:id", r.Model.Name)},
 
 		// PATCH /collection
-		{PATCH, fmt.Sprintf("/%s/:id", r.Name)},
+		{PATCH, fmt.Sprintf("/%s/:id", r.Model.Name)},
 
 		// DELETE /collection
-		{DELETE, fmt.Sprintf("/%s/:id", r.Name)},
+		{DELETE, fmt.Sprintf("/%s/:id", r.Model.Name)},
 	}
 
 }
 
 func NewRouterWithPath(path string) (*Router, error) {
-	resource, err := NewResourceWithPath(path)
+	model, err := NewModelWithPath(path)
 	if err != nil {
 		return nil, err
 	}
 
-	router := &Router{Resource: resource, filePath: path}
+	router := &Router{Model: model, filePath: path}
 	router.setRestRoutes()
 	return router, err
 }

@@ -9,6 +9,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"log"
 )
 
 type ApiFaker struct {
@@ -85,7 +87,7 @@ func (af *ApiFaker) setHandlers(prefix string) {
 	for _, router := range af.Routers {
 		for _, route := range router.Routes {
 			method := route.Method
-			resource := router.Resource
+			model := router.Model
 			path := prefix + route.Path
 			switch method {
 			case GET:
@@ -93,14 +95,16 @@ func (af *ApiFaker) setHandlers(prefix string) {
 					idStr := ctx.Param("id")
 					// GET /collection
 					if idStr == "" {
-						resourceSlice := NewItemsFromInterfaces(resource.Set.ToSlice())
-						sort.Sort(resourceSlice)
-						ctx.JSON(http.StatusOK, resourceSlice)
+						models := model.ToLineItems()
+						sort.Sort(models)
+						log.Println("[models]: ", models)
+						ctx.JSON(http.StatusOK, models.ToSlice())
 					} else if id, err := strconv.Atoi(idStr); err == nil {
 						// GET /collection/:id
-						if item, ok := resource.Get(id); ok {
-							ctx.JSON(http.StatusOK, item)
+						if li, ok := model.Get(id); ok {
+							ctx.JSON(http.StatusOK, li.ToMap())
 						} else {
+							log.Println("[GET one]", li)
 							ctx.JSON(http.StatusNotFound, nil)
 						}
 					} else {
@@ -110,57 +114,54 @@ func (af *ApiFaker) setHandlers(prefix string) {
 				})
 			case POST:
 				af.POST(path, func(ctx *gin.Context) {
-					item, err := NewItemWithGinContext(ctx, resource)
+					li, err := NewLineItemWithGinContext(ctx, model)
 					if err != nil {
 						ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 					} else {
-						if err = resource.Add(item); err != nil {
+						if err = model.Add(li); err != nil {
 							ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 						} else {
-							ctx.JSON(http.StatusOK, item)
+							ctx.JSON(http.StatusOK, li.ToMap())
 						}
 					}
 				})
 			case PUT:
 				af.PUT(path, func(ctx *gin.Context) {
-					idStr := ctx.Param("id")
 					// check if id is int
-					id, err := strconv.Atoi(idStr)
+					id, err := strconv.Atoi(ctx.Param("id"))
 					if err != nil {
 						ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
 						return
 					}
 
 					// update
-					code, resp := resource.UpdateWithAllAttrsInGinContex(id, ctx)
+					code, resp := model.UpdateWithAllAttrsInGinContex(id, ctx)
 					ctx.JSON(code, resp)
 				})
 			case PATCH:
 				af.PATCH(path, func(ctx *gin.Context) {
-					idStr := ctx.Param("id")
 					// check if id is int
-					id, err := strconv.Atoi(idStr)
+					id, err := strconv.Atoi(ctx.Param("id"))
 					if err != nil {
 						ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
 						return
 					}
 
 					// update
-					code, resp := resource.UpdateWithAttrsInGinContext(id, ctx)
+					code, resp := model.UpdateWithAttrsInGinContext(id, ctx)
 					ctx.JSON(code, resp)
 				})
 			case DELETE:
 				af.DELETE(path, func(ctx *gin.Context) {
-					idStr := ctx.Param("id")
 					// check if id is int
-					id, err := strconv.Atoi(idStr)
+					id, err := strconv.Atoi(ctx.Param("id"))
 					if err != nil {
 						ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
 						return
 					}
 
 					// delete
-					resource.Remove(gset.T(id))
+					model.Remove(gset.T(id))
 					ctx.JSON(http.StatusOK, nil)
 				})
 			}
