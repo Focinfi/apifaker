@@ -116,6 +116,10 @@ PATCH   /fake_api/users/:id
 DELETE  /fake_api/users/:id
 ```
 
+### TODO
+1. Add type checking for POST PUT PATCH.
+2. Add relationship for deferent resources. like one2one, one2many, many2many.
+
 
 
 
