@@ -114,10 +114,12 @@ func (af *ApiFaker) setHandlers(prefix string) {
 				})
 			case POST:
 				af.POST(path, func(ctx *gin.Context) {
+					// create a new lineitems with ctx.PostForm()
 					li, err := NewLineItemWithGinContext(ctx, model)
 					if err != nil {
 						ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 					} else {
+						// add this lineitem to model
 						if err = model.Add(li); err != nil {
 							ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 						} else {
@@ -127,27 +129,27 @@ func (af *ApiFaker) setHandlers(prefix string) {
 				})
 			case PUT:
 				af.PUT(path, func(ctx *gin.Context) {
-					// check if id is int
+					// check if param "id" is int
 					id, err := strconv.Atoi(ctx.Param("id"))
 					if err != nil {
 						ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
 						return
 					}
 
-					// update
+					// update with attrs
 					code, resp := model.UpdateWithAllAttrsInGinContex(id, ctx)
 					ctx.JSON(code, resp)
 				})
 			case PATCH:
 				af.PATCH(path, func(ctx *gin.Context) {
-					// check if id is int
+					// check if param "id" is int
 					id, err := strconv.Atoi(ctx.Param("id"))
 					if err != nil {
 						ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
 						return
 					}
 
-					// update
+					// update with attrs, got error if attrs is not complete
 					code, resp := model.UpdateWithAttrsInGinContext(id, ctx)
 					ctx.JSON(code, resp)
 				})

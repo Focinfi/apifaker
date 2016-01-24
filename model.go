@@ -19,16 +19,21 @@ type Column struct {
 }
 
 type Model struct {
-	Name  string                   `json:"resource_name"`
-	Seeds []map[string]interface{} `json:"seeds"`
+	Name string `json:"resource_name"`
+	// Seeds contains value of "seeds" in json files
+	Seeds   []map[string]interface{} `json:"seeds"`
+	Columns []Column                 `json:"columns"`
 
-	Columns []Column `json:"columns"`
-
+	// Set Compose *gset.Set to contains data
 	*gset.Set `json:"-"`
-	filePath  string `json:"-"`
-	currentId int    `json:"-"`
+
+	// filePath json file path
+	filePath string `json:"-"`
+	// currentId record the number of times of adding
+	currentId int `json:"-"`
 }
 
+// NewModel allocates and returns a new Model
 func NewModel() *Model {
 	return &Model{
 		Seeds:   []map[string]interface{}{},
@@ -37,11 +42,14 @@ func NewModel() *Model {
 	}
 }
 
+// nextId plus 1 to Model.currentId return return it
 func (model *Model) nextId() int {
 	model.currentId++
 	return model.currentId
 }
 
+// Get get and return element with id param, also return
+// if it's not nil or a LineItem
 func (model Model) Get(id int) (li LineItem, ok bool) {
 	var element interface{}
 	if element, ok = model.Set.Get(id); ok {
@@ -50,6 +58,7 @@ func (model Model) Get(id int) (li LineItem, ok bool) {
 	return
 }
 
+// Add add a LineItem to Model.Set
 func (model *Model) Add(li LineItem) error {
 	if err := model.checkSeed(li.ToMap()); err != nil {
 		return err
@@ -61,17 +70,24 @@ func (model *Model) Add(li LineItem) error {
 	return nil
 }
 
+// Update a LineItem in Model
 func (model *Model) Update(id int, li *LineItem) error {
 	if err := model.checkSeed(li.dataMap); err != nil {
 		return err
 	} else {
-		li.Set("id", id)
-		model.Set.Add(li)
+		if model.Has(gset.T(id)) {
+			li.Set("id", id)
+			model.Set.Add(li)
+		} else {
+			return fmt.Errorf("model[id:%d] does not exsit", id)
+		}
 	}
 
 	return nil
 }
 
+// ToLineItems allocate a new LineItems filled with
+// Model elements slice
 func (m Model) ToLineItems() LineItems {
 	lis := []LineItem{}
 	models := m.Set.ToSlice()
@@ -83,6 +99,9 @@ func (m Model) ToLineItems() LineItems {
 	return LineItems(lis)
 }
 
+// UpdateWithAttrsInGinContext find a LineItem with id param,
+// update it with attrs from gin.Contex.PostForm(),
+// returns status in net/http package and object for response
 func (model *Model) UpdateWithAttrsInGinContext(id int, ctx *gin.Context) (int, interface{}) {
 	// check if element does exsit
 	li, ok := model.Get(id)
@@ -100,6 +119,10 @@ func (model *Model) UpdateWithAttrsInGinContext(id int, ctx *gin.Context) (int, 
 	return http.StatusOK, li.ToMap()
 }
 
+// UpdateWithAllAttrsInGinContex find a LineItem with id param,
+// allocate a new LineItem with attrs from gin.Context.PostForm(),
+// replace this LineItem with the new one,
+// returns status in net/http package, and object for response
 func (model *Model) UpdateWithAllAttrsInGinContex(id int, ctx *gin.Context) (int, interface{}) {
 	// check if element does exsit
 	_, ok := model.Get(id)
