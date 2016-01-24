@@ -90,21 +90,35 @@ func (af *ApiFaker) setHandlers(prefix string) {
 			case GET:
 				af.GET(path, func(ctx *gin.Context) {
 					idStr := ctx.Param("id")
-					if id, err := strconv.Atoi(idStr); err != nil {
+					// GET /collection
+					if idStr == "" {
 						resourceSlice := NewItemsFromInterfaces(resource.Set.ToSlice())
 						sort.Sort(resourceSlice)
 						ctx.JSON(http.StatusOK, resourceSlice)
-					} else {
+					} else if id, err := strconv.Atoi(idStr); err == nil {
+						// GET /collection/:id
 						if item, ok := resource.Get(id); ok {
 							ctx.JSON(http.StatusOK, item)
 						} else {
 							ctx.JSON(http.StatusNotFound, nil)
 						}
+					} else {
+						// GET /collection/xxx
+						ctx.JSON(http.StatusBadRequest, nil)
 					}
 				})
 			case POST:
 				af.POST(path, func(ctx *gin.Context) {
-					ctx.JSON(http.StatusOK, resource.Set.ToSlice())
+					item, err := NewItemWithGinContext(ctx, router)
+					if err != nil {
+						ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+					} else {
+						if err = resource.Add(item); err != nil {
+							ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+						} else {
+							ctx.JSON(http.StatusOK, item)
+						}
+					}
 				})
 			case PUT:
 				af.PUT(path, func(ctx *gin.Context) {
@@ -112,7 +126,29 @@ func (af *ApiFaker) setHandlers(prefix string) {
 				})
 			case PATCH:
 				af.PATCH(path, func(ctx *gin.Context) {
-					ctx.JSON(http.StatusOK, resource.Set.ToSlice())
+					idStr := ctx.Param("id")
+					// check if id is int
+					id, err := strconv.Atoi(idStr)
+					if err != nil {
+						ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
+						return
+					}
+
+					// check if element does exsit
+					element, ok := resource.Get(id)
+					if !ok {
+						ctx.JSON(http.StatusNotFound, nil)
+						return
+					}
+
+					// update item
+					item := element.(Item)
+					err = (&item).UpdateWithGinContext(ctx, router)
+					if err != nil {
+						ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
+					} else {
+						ctx.JSON(http.StatusOK, item)
+					}
 				})
 			case DELETE:
 				af.DELETE(path, func(ctx *gin.Context) {

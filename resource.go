@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Focinfi/gset"
-	// "github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"os"
 )
@@ -22,6 +22,19 @@ type Item map[string]interface{}
 
 func (i Item) Element() interface{} {
 	return i["id"]
+}
+
+func (i *Item) UpdateWithGinContext(ctx *gin.Context, r *Router) error {
+	item := (map[string]interface{})(*i)
+	for _, column := range r.Cloumns {
+		if value := ctx.PostForm(column.Name); value != "" {
+			// TODO: check type
+			item[column.Name] = value
+		}
+	}
+	tempItem := Item(item)
+	i = &tempItem
+	return nil
 }
 
 type Items []Item
@@ -85,6 +98,7 @@ func (r *Resource) checkSeed(seed map[string]interface{}) error {
 
 	for _, column := range columns {
 		if _, ok := seed[column.Name]; !ok {
+			CloumnNameError = fmt.Errorf("has wrong column: %s", column.Name)
 			return CloumnNameError
 		}
 		// TODO: check type
@@ -146,13 +160,17 @@ func NewResourceWithPath(path string) (r *Resource, err error) {
 	return
 }
 
-// func NewResourceWithGinContext(ctx *gin.Context, r Router) (*Resource, error) {
-// 	// ctx.PostForm()
-// 	item := Item{}
+func NewItemWithGinContext(ctx *gin.Context, r *Router) (Item, error) {
+	item := make(map[string]interface{})
+	for _, column := range r.Cloumns {
+		if param := ctx.PostForm(column.Name); param != "" {
+			// TODO: check type
+			item[column.Name] = param
+		} else {
+			CloumnNameError = fmt.Errorf("doesn't has column: %s", column.Name)
+			return nil, CloumnNameError
+		}
+	}
 
-// 	for _, column := range r.Cloumns {
-// 		// column.Name
-// 	}
-
-// 	return nil, nil
-// }
+	return Item(item), nil
+}
