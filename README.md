@@ -117,6 +117,7 @@ DELETE  /fake_api/users/:id
 ```
 
 ### TODO
+0. Writing data into json files for persistence.
 1. Add type checking for POST PUT PATCH.
 2. Add relationship for deferent resources. like one2one, one2many, many2many.
 
