@@ -1,6 +1,7 @@
 package apifaker
 
 import (
+	"github.com/Focinfi/gset"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"os"
@@ -150,6 +151,16 @@ func (af *ApiFaker) setHandlers(prefix string) {
 				})
 			case DELETE:
 				af.DELETE(path, func(ctx *gin.Context) {
+					idStr := ctx.Param("id")
+					// check if id is int
+					id, err := strconv.Atoi(idStr)
+					if err != nil {
+						ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
+						return
+					}
+
+					// delete
+					resource.Remove(gset.T(id))
 					ctx.JSON(http.StatusOK, nil)
 				})
 			}
