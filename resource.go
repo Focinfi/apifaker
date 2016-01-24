@@ -11,10 +11,10 @@ import (
 	"os"
 )
 
-var CloumnCountError = errors.New("Has wrong count of columns")
-var CloumnNameError = errors.New("Has wrong column")
+var ColumnCountError = errors.New("Has wrong count of columns")
+var ColumnNameError = errors.New("Has wrong column")
 
-type Cloumn struct {
+type Column struct {
 	Name string `json:"name"`
 	Type string `json:"type"`
 }
@@ -27,7 +27,7 @@ func (i Item) Element() interface{} {
 
 func (i *Item) UpdateWithGinContext(ctx *gin.Context, r *Resource) error {
 	item := (map[string]interface{})(*i)
-	for _, column := range r.Cloumns {
+	for _, column := range r.Columns {
 		if value := ctx.PostForm(column.Name); value != "" {
 			// TODO: check type
 			item[column.Name] = value
@@ -70,7 +70,7 @@ type Resource struct {
 	Name  string                   `json:"resource_name"`
 	Seeds []map[string]interface{} `json:"seeds"`
 
-	Cloumns []Cloumn `json:"cloumns"`
+	Columns []Column `json:"columns"`
 
 	*gset.Set `json:"-"`
 	filePath  string `json:"-"`
@@ -140,16 +140,16 @@ func (r *Resource) UpdateWithAllAttrsInGinContex(id int, ctx *gin.Context) (int,
 
 // checkSeed check specific seed
 func (r *Resource) checkSeed(seed map[string]interface{}) error {
-	columns := r.Cloumns
+	columns := r.Columns
 
 	if len(seed) != len(columns) {
-		return CloumnCountError
+		return ColumnCountError
 	}
 
 	for _, column := range columns {
 		if _, ok := seed[column.Name]; !ok {
-			CloumnNameError = fmt.Errorf("has wrong column: %s", column.Name)
-			return CloumnNameError
+			ColumnNameError = fmt.Errorf("has wrong column: %s", column.Name)
+			return ColumnNameError
 		}
 		// TODO: check type
 	}
@@ -212,13 +212,13 @@ func NewResourceWithPath(path string) (r *Resource, err error) {
 
 func NewItemWithGinContext(ctx *gin.Context, r *Resource) (Item, error) {
 	item := make(map[string]interface{})
-	for _, column := range r.Cloumns {
+	for _, column := range r.Columns {
 		if param := ctx.PostForm(column.Name); param != "" {
 			// TODO: check type
 			item[column.Name] = param
 		} else {
-			CloumnNameError = fmt.Errorf("doesn't has column: %s", column.Name)
-			return nil, CloumnNameError
+			ColumnNameError = fmt.Errorf("doesn't has column: %s", column.Name)
+			return nil, ColumnNameError
 		}
 	}
 

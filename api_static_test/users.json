@@ -1,6 +1,6 @@
 {
     "resource_name": "users",
-    "cloumns": [
+    "columns": [
         {
             "name": "name",
             "type": "string"
