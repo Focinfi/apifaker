@@ -109,7 +109,7 @@ func (af *ApiFaker) setHandlers(prefix string) {
 				})
 			case POST:
 				af.POST(path, func(ctx *gin.Context) {
-					item, err := NewItemWithGinContext(ctx, router)
+					item, err := NewItemWithGinContext(ctx, resource)
 					if err != nil {
 						ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 					} else {
@@ -122,7 +122,17 @@ func (af *ApiFaker) setHandlers(prefix string) {
 				})
 			case PUT:
 				af.PUT(path, func(ctx *gin.Context) {
-					ctx.JSON(http.StatusOK, resource.Set.ToSlice())
+					idStr := ctx.Param("id")
+					// check if id is int
+					id, err := strconv.Atoi(idStr)
+					if err != nil {
+						ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
+						return
+					}
+
+					// update
+					code, resp := resource.UpdateWithAllAttrsInGinContex(id, ctx)
+					ctx.JSON(code, resp)
 				})
 			case PATCH:
 				af.PATCH(path, func(ctx *gin.Context) {
@@ -134,21 +144,9 @@ func (af *ApiFaker) setHandlers(prefix string) {
 						return
 					}
 
-					// check if element does exsit
-					element, ok := resource.Get(id)
-					if !ok {
-						ctx.JSON(http.StatusNotFound, nil)
-						return
-					}
-
-					// update item
-					item := element.(Item)
-					err = (&item).UpdateWithGinContext(ctx, router)
-					if err != nil {
-						ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
-					} else {
-						ctx.JSON(http.StatusOK, item)
-					}
+					// update
+					code, resp := resource.UpdateWithAttrsInGinContext(id, ctx)
+					ctx.JSON(code, resp)
 				})
 			case DELETE:
 				af.DELETE(path, func(ctx *gin.Context) {

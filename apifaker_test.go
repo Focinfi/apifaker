@@ -61,22 +61,36 @@ func TestSetHandlers(t *testing.T) {
 
 	gtester.AssertEqual(t, faker.Routers[0].Resource.Set.Has(gset.T(4)), true)
 
-	// PUT /users/:id
-
 	// PATCH /users/:id
-	userEditedAttr := map[string]interface{}{"name": "Vincent"}
-	response, _ = httpmock.PATCH("/users/4", userEditedAttr)
+	userEditedAttrPatch := map[string]interface{}{"name": "Vincent"}
+	response, _ = httpmock.PATCH("/users/4", userEditedAttrPatch)
 	gtester.AssertEqual(t, response.Code, http.StatusOK)
 
 	respJSON = response.JSON()
 	if resMap, ok := respJSON.(map[string]interface{}); ok {
 		gtester.AssertEqual(t, resMap["id"], float64(4))
-		gtester.AssertEqual(t, resMap["name"], userEditedAttr["name"])
+		gtester.AssertEqual(t, resMap["name"], userEditedAttrPatch["name"])
 		gtester.AssertEqual(t, resMap["phone"], userParam["phone"])
-		gtester.AssertEqual(t, resMap["age"], (userParam["age"]))
+		gtester.AssertEqual(t, resMap["age"], userParam["age"])
 	} else {
 		t.Errorf("can not set PATCH handlers, response body is: %s", response.Body.String())
 	}
+
+	// PUT /users/:id
+	userEditedAttrPut := map[string]interface{}{"name": "Vincent", "phone": "13213213217", "age": "23"}
+	response, _ = httpmock.PUT("/users/4", userEditedAttrPut)
+	gtester.AssertEqual(t, response.Code, http.StatusOK)
+
+	respJSON = response.JSON()
+	if resMap, ok := respJSON.(map[string]interface{}); ok {
+		gtester.AssertEqual(t, resMap["id"], float64(4))
+		gtester.AssertEqual(t, resMap["name"], userEditedAttrPut["name"])
+		gtester.AssertEqual(t, resMap["phone"], userEditedAttrPut["phone"])
+		gtester.AssertEqual(t, resMap["age"], userEditedAttrPut["age"])
+	} else {
+		t.Errorf("can not set PATCH handlers, response body is: %s", response.Body.String())
+	}
+
 }
 
 func TestMountTo(t *testing.T) {

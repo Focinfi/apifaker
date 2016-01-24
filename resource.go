@@ -7,6 +7,7 @@ import (
 	"github.com/Focinfi/gset"
 	"github.com/gin-gonic/gin"
 	"io/ioutil"
+	"net/http"
 	"os"
 )
 
@@ -24,7 +25,7 @@ func (i Item) Element() interface{} {
 	return i["id"]
 }
 
-func (i *Item) UpdateWithGinContext(ctx *gin.Context, r *Router) error {
+func (i *Item) UpdateWithGinContext(ctx *gin.Context, r *Resource) error {
 	item := (map[string]interface{})(*i)
 	for _, column := range r.Cloumns {
 		if value := ctx.PostForm(column.Name); value != "" {
@@ -86,6 +87,55 @@ func (r *Resource) Add(item map[string]interface{}) error {
 	}
 
 	return nil
+}
+
+func (r *Resource) UpdateItem(id int, item *Item) error {
+	itemTmp := (map[string]interface{})(*item)
+	if err := r.checkSeed(itemTmp); err != nil {
+		return err
+	} else {
+		itemTmp["id"] = id
+		newItem := Item(itemTmp)
+		r.Set.Add(newItem)
+		item = &newItem
+	}
+	return nil
+}
+
+func (r *Resource) UpdateWithAttrsInGinContext(id int, ctx *gin.Context) (int, interface{}) {
+	// check if element does exsit
+	element, ok := r.Get(id)
+	if !ok {
+		return http.StatusNotFound, nil
+	}
+
+	// update item
+	item := element.(Item)
+	err := (&item).UpdateWithGinContext(ctx, r)
+	if err != nil {
+		return http.StatusBadRequest, map[string]string{"message": err.Error()}
+	} else {
+		return http.StatusOK, item
+	}
+}
+
+func (r *Resource) UpdateWithAllAttrsInGinContex(id int, ctx *gin.Context) (int, interface{}) {
+	// check if element does exsit
+	_, ok := r.Get(id)
+	if !ok {
+		return http.StatusNotFound, nil
+	}
+
+	// create a new item
+	newItem, err := NewItemWithGinContext(ctx, r)
+	// update item
+	r.UpdateItem(id, &newItem)
+
+	if err != nil {
+		return http.StatusBadRequest, map[string]string{"message": err.Error()}
+	} else {
+		return http.StatusOK, newItem
+	}
 }
 
 // checkSeed check specific seed
@@ -160,7 +210,7 @@ func NewResourceWithPath(path string) (r *Resource, err error) {
 	return
 }
 
-func NewItemWithGinContext(ctx *gin.Context, r *Router) (Item, error) {
+func NewItemWithGinContext(ctx *gin.Context, r *Resource) (Item, error) {
 	item := make(map[string]interface{})
 	for _, column := range r.Cloumns {
 		if param := ctx.PostForm(column.Name); param != "" {
