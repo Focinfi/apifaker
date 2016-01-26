@@ -161,6 +161,7 @@ func (model *Model) UpdateWithAllAttrsInGinContex(id int, ctx *gin.Context) (int
 // checkSeed check specific seed
 func (model *Model) checkSeed(seed map[string]interface{}) error {
 	columns := model.Columns
+	delete(seed, "id")
 
 	if len(seed) != len(columns) {
 		return ColumnCountError
@@ -207,7 +208,7 @@ func (model *Model) SetToSeeds() {
 
 func (model *Model) SaveToFile(path string) error {
 	// open file
-	file, err := os.Open(path)
+	file, err := os.Create(path)
 	if err != nil {
 		return err
 	}
@@ -219,8 +220,7 @@ func (model *Model) SaveToFile(path string) error {
 	if err != nil {
 		return err
 	}
-
-	_, err = file.Write(bytes)
+	_, err = file.WriteString(string(bytes))
 	return err
 }
 

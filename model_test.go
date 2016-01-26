@@ -2,6 +2,7 @@ package apifaker
 
 import (
 	. "github.com/Focinfi/gtester"
+	"os"
 	"testing"
 )
 
@@ -10,6 +11,7 @@ func TestNewModelWithPath(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+
 	AssertEqual(t, model.Name, "users")
 	AssertEqual(t, model.Set.Len(), 3)
 }
@@ -35,7 +37,7 @@ func TestSetSeeds(t *testing.T) {
 	liMap := map[string]interface{}{
 		"name":  "Monica",
 		"phone": "12332132132",
-		"age":   21,
+		"age":   float64(21),
 	}
 
 	li := LineItem{liMap}
@@ -50,4 +52,10 @@ func TestSetSeeds(t *testing.T) {
 	AssertEqual(t, phoneInSeed, liMap["phone"])
 	ageInSeed, _ := liInSeed.Get("age")
 	AssertEqual(t, ageInSeed, liMap["age"])
+
+	err := model.SaveToFile(testDir + "/users_temp.json")
+	defer os.Remove(testDir + "/users_temp.json")
+	if err != nil {
+		t.Error(err.Error())
+	}
 }

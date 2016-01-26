@@ -67,7 +67,6 @@ func (r *Router) setRestRoutes() {
 		// DELETE /collection
 		{DELETE, fmt.Sprintf("/%s/:id", r.Model.Name)},
 	}
-
 }
 
 func (r *Router) SaveToFile() error {
