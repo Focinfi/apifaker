@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"sort"
 	"sync"
 )
 
@@ -25,7 +26,7 @@ type Model struct {
 	Seeds   []map[string]interface{} `json:"seeds"`
 	Columns []Column                 `json:"columns"`
 
-	// SetThreadSafe Compose *gset.SetThreadSafe to contains data
+	// Set Compose *gset.SetThreadSafe to contains data
 	Set *gset.SetThreadSafe `json:"-"`
 
 	// filePath json file path
@@ -51,8 +52,8 @@ func (model *Model) nextId() int {
 }
 
 // Has return if m has LineItem with id param
-func (m *Model) Has(id int) bool {
-	return m.Set.Has(gset.T(id))
+func (model *Model) Has(id int) bool {
+	return model.Set.Has(gset.T(id))
 }
 
 // Get get and return element with id param, also return
@@ -196,6 +197,31 @@ func (model *Model) setItems() {
 	for _, seed := range model.Seeds {
 		model.Add(NewLineItemWithMap(seed))
 	}
+}
+
+func (model *Model) SetToSeeds() {
+	models := model.ToLineItems()
+	sort.Sort(models)
+	model.Seeds = models.ToSlice()
+}
+
+func (model *Model) SaveToFile(path string) error {
+	// open file
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// set m.Set to m.seeds
+	model.SetToSeeds()
+	bytes, err := json.Marshal(model)
+	if err != nil {
+		return err
+	}
+
+	_, err = file.Write(bytes)
+	return err
 }
 
 // NewModelWithPath allocates and returns a new Model,

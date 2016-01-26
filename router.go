@@ -70,6 +70,10 @@ func (r *Router) setRestRoutes() {
 
 }
 
+func (r *Router) SaveToFile() error {
+	return r.Model.SaveToFile(r.filePath)
+}
+
 func NewRouterWithPath(path string) (*Router, error) {
 	model, err := NewModelWithPath(path)
 	if err != nil {

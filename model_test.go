@@ -1,7 +1,7 @@
 package apifaker
 
 import (
-	"github.com/Focinfi/gtester"
+	. "github.com/Focinfi/gtester"
 	"testing"
 )
 
@@ -10,8 +10,8 @@ func TestNewModelWithPath(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	gtester.AssertEqual(t, model.Name, "users")
-	gtester.AssertEqual(t, model.Set.Len(), 3)
+	AssertEqual(t, model.Name, "users")
+	AssertEqual(t, model.Set.Len(), 3)
 }
 
 func TestCheckModelColumns(t *testing.T) {
@@ -28,4 +28,26 @@ func TestCheckModelColumns(t *testing.T) {
 	if err := model.checkSeeds(); err != ColumnNameError {
 		t.Error("Can not check column name")
 	}
+}
+
+func TestSetSeeds(t *testing.T) {
+	model, _ := NewModelWithPath(testDir + "/users.json")
+	liMap := map[string]interface{}{
+		"name":  "Monica",
+		"phone": "12332132132",
+		"age":   21,
+	}
+
+	li := LineItem{liMap}
+	model.Add(li)
+	model.SetToSeeds()
+	AssertEqual(t, model.Has(4), true)
+
+	liInSeed, _ := model.Get(4)
+	nameInSeed, _ := liInSeed.Get("name")
+	AssertEqual(t, nameInSeed, liMap["name"])
+	phoneInSeed, _ := liInSeed.Get("phone")
+	AssertEqual(t, phoneInSeed, liMap["phone"])
+	ageInSeed, _ := liInSeed.Get("age")
+	AssertEqual(t, ageInSeed, liMap["age"])
 }
