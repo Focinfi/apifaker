@@ -1,7 +1,7 @@
 package apifaker
 
 import (
-	"github.com/Focinfi/gtester"
+	. "github.com/Focinfi/gtester"
 	"testing"
 )
 
@@ -11,6 +11,6 @@ func TestNewRouter(t *testing.T) {
 		t.Error(err)
 	}
 
-	gtester.AssertEqual(t, router.Model.Name, "users")
-	gtester.AssertEqual(t, router.filePath, testDir+"/users.json")
+	AssertEqual(t, router.Model.Name, "users")
+	AssertEqual(t, router.filePath, testDir+"/users.json")
 }

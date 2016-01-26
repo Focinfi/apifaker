@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"log"
 )
@@ -20,7 +21,7 @@ type ApiFaker struct {
 	// ApiDir the directory contains api json files
 	ApiDir string
 
-	// Routers a array of pointer of Router
+	// Routers a array of pointer for Router
 	Routers []*Router
 
 	// TrueMux external mux for the real api
@@ -34,7 +35,12 @@ type ApiFaker struct {
 // returns the pointer of ApiFaker and error will not be nil if
 // there are some errors of manipulating ApiDir or json.Unmarshal
 func NewWithApiDir(dir string) (*ApiFaker, error) {
-	faker := &ApiFaker{Engine: gin.Default(), ApiDir: dir, Routers: []*Router{}}
+	faker := &ApiFaker{
+		Engine:  gin.Default(),
+		ApiDir:  dir,
+		Routers: []*Router{},
+	}
+
 	err := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
 		if f == nil {
 			return err
@@ -53,6 +59,7 @@ func NewWithApiDir(dir string) (*ApiFaker, error) {
 
 	if err == nil {
 		faker.setHandlers("")
+		faker.setSaveToFileTimer()
 	}
 	return faker, err
 }
@@ -80,9 +87,41 @@ func (af *ApiFaker) MountTo(path string, handler http.Handler) {
 	af.TrueMux = handler
 }
 
+func (af *ApiFaker) SaveToFile() {
+	for _, router := range af.Routers {
+		router.SaveToFile()
+	}
+}
+
+// setSaveToFileTimer set a periodic timer to call SaveToFile()
+func (af *ApiFaker) setSaveToFileTimer() {
+	go func() {
+		for {
+			now := time.Now()
+			next := now.Add(time.Hour * 24)
+			nextSaveDate := time.Date(next.Year(),
+				next.Month(),
+				next.Day(),
+				0, 0, 0, 0,
+				next.Location())
+			timer := time.NewTimer(nextSaveDate.Sub(now))
+			<-timer.C
+			af.SaveToFile()
+		}
+	}()
+}
+
 // setHandlers set all handlers into af.Engine.
 // It will panic when there are has repeat combination of route.Method and route.Path
 func (af *ApiFaker) setHandlers(prefix string) {
+	// if any panic exsits, Save data to json
+	defer func() {
+		if err := recover(); err != nil {
+			log.Fatal(err)
+			af.SaveToFile()
+		}
+	}()
+
 	for _, router := range af.Routers {
 		for _, route := range router.Routes {
 			method := route.Method

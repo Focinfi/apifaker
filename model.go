@@ -22,6 +22,7 @@ type Column struct {
 
 type Model struct {
 	Name string `json:"resource_name"`
+
 	// Seeds contains value of "seeds" in json files
 	Seeds   []map[string]interface{} `json:"seeds"`
 	Columns []Column                 `json:"columns"`
@@ -29,11 +30,12 @@ type Model struct {
 	// Set Compose *gset.SetThreadSafe to contains data
 	Set *gset.SetThreadSafe `json:"-"`
 
-	// filePath json file path
-	filePath string `json:"-"`
 	// currentId record the number of times of adding
 	currentId int `json:"-"`
-	sync.Mutex
+
+	// dataChanged record the sign if this Model's Set have been changed
+	dataChanged bool `json:"_"`
+	sync.Mutex  `json:"_"`
 }
 
 // NewModel allocates and returns a new Model
@@ -76,6 +78,7 @@ func (model *Model) Add(li LineItem) error {
 	} else {
 		li.Set("id", model.nextId())
 		model.Set.Add(li)
+		model.dataChanged = true
 	}
 
 	return nil
@@ -89,6 +92,7 @@ func (model *Model) Update(id int, li *LineItem) error {
 		if model.Set.Has(gset.T(id)) {
 			li.Set("id", id)
 			model.Set.Add(li)
+			model.dataChanged = true
 		} else {
 			return fmt.Errorf("model[id:%d] does not exsit", id)
 		}
@@ -98,17 +102,18 @@ func (model *Model) Update(id int, li *LineItem) error {
 }
 
 // Delete
-func (m *Model) Delete(id int) {
-	m.Set.Remove(gset.T(id))
+func (model *Model) Delete(id int) {
+	model.Set.Remove(gset.T(id))
+	model.dataChanged = true
 }
 
 // ToLineItems allocate a new LineItems filled with
 // Model elements slice
-func (m Model) ToLineItems() LineItems {
+func (model Model) ToLineItems() LineItems {
 	lis := []LineItem{}
-	models := m.Set.ToSlice()
-	for _, model := range models {
-		if li, ok := model.(LineItem); ok {
+	elements := model.Set.ToSlice()
+	for _, element := range elements {
+		if li, ok := element.(LineItem); ok {
 			lis = append(lis[:], li)
 		}
 	}
@@ -209,6 +214,13 @@ func (model *Model) SetToSeeds() {
 
 // SaveToFile save model to file with the given path
 func (model *Model) SaveToFile(path string) error {
+	if !model.dataChanged {
+		return nil
+	}
+
+	model.Lock()
+	defer model.Unlock()
+
 	// open file
 	file, err := os.Create(path)
 	if err != nil {
@@ -223,6 +235,11 @@ func (model *Model) SaveToFile(path string) error {
 		return err
 	}
 	_, err = file.WriteString(string(bytes))
+
+	if err == nil {
+		model.dataChanged = false
+	}
+
 	return err
 }
 
@@ -242,7 +259,6 @@ func NewModelWithPath(path string) (*Model, error) {
 		return nil, err
 	}
 	model := NewModel()
-	model.filePath = path
 	if err = json.Unmarshal(bytes, model); err != nil {
 		err = fmt.Errorf("[apifaker] json format error: %s, file: %s", err.Error(), path)
 	} else {

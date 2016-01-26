@@ -32,7 +32,7 @@ func TestCheckModelColumns(t *testing.T) {
 	}
 }
 
-func TestSetSeeds(t *testing.T) {
+func TestSaveToFile(t *testing.T) {
 	model, _ := NewModelWithPath(testDir + "/users.json")
 	liMap := map[string]interface{}{
 		"name":  "Monica",
@@ -44,6 +44,7 @@ func TestSetSeeds(t *testing.T) {
 	model.Add(li)
 	model.SetToSeeds()
 	AssertEqual(t, model.Has(4), true)
+	AssertEqual(t, model.dataChanged, true)
 
 	liInSeed, _ := model.Get(4)
 	nameInSeed, _ := liInSeed.Get("name")
@@ -55,7 +56,10 @@ func TestSetSeeds(t *testing.T) {
 
 	err := model.SaveToFile(testDir + "/users_temp.json")
 	defer os.Remove(testDir + "/users_temp.json")
+
 	if err != nil {
 		t.Error(err.Error())
+	} else {
+		AssertEqual(t, model.dataChanged, false)
 	}
 }

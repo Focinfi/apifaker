@@ -90,6 +90,14 @@ DELETE /users/:id
 
 And this apis are really be able to manage the users resource, just like using database.
 
+#### Data persistence
+
+`apifaker` will save automatically the changes back to the json file once 24 hours and when you handlers panic something. On the other hand, you can save data manually:
+
+```go
+fakeApi.SaveTofile()
+```
+
 #### Mount to other mux
 
 Also, you can compose other mutex which implemneted `http.Handler` to the fakeApi
@@ -117,7 +125,6 @@ DELETE  /fake_api/users/:id
 ```
 
 ### TODO
-0. Writing data into json files for persistence.
 1. Add type checking for POST PUT PATCH.
 2. Add relationship for deferent resources. like one2one, one2many, many2many.
 

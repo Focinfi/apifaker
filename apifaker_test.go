@@ -2,7 +2,7 @@ package apifaker
 
 import (
 	"github.com/Focinfi/gset"
-	"github.com/Focinfi/gtester"
+	. "github.com/Focinfi/gtester"
 	"github.com/Focinfi/gtester/httpmock"
 	"net/http"
 	"os"
@@ -35,43 +35,43 @@ func TestSetHandlers(t *testing.T) {
 
 	// GET /users/:id
 	response := httpmock.GET("/users/1", nil)
-	gtester.AssertResponseEqual(t, response, usersFixture[0])
+	AssertResponseEqual(t, response, usersFixture[0])
 
 	// GET /users
 	response = httpmock.GET("/users", nil)
-	gtester.AssertResponseEqual(t, response, usersFixture)
+	AssertResponseEqual(t, response, usersFixture)
 
 	// GET /users/xxx
 	response = httpmock.GET("/users/xxx", nil)
-	gtester.AssertEqual(t, response.Code, http.StatusBadRequest)
+	AssertEqual(t, response.Code, http.StatusBadRequest)
 
 	// POST /users
 	response, _ = httpmock.POSTForm("/users", userParam)
-	gtester.AssertEqual(t, response.Code, http.StatusOK)
+	AssertEqual(t, response.Code, http.StatusOK)
 
 	respJSON := response.JSON()
 	if resMap, ok := respJSON.(map[string]interface{}); ok {
-		gtester.AssertEqual(t, resMap["id"], float64(4))
-		gtester.AssertEqual(t, resMap["name"], userParam["name"])
-		gtester.AssertEqual(t, resMap["phone"], userParam["phone"])
-		gtester.AssertEqual(t, resMap["age"], (userParam["age"]))
+		AssertEqual(t, resMap["id"], float64(4))
+		AssertEqual(t, resMap["name"], userParam["name"])
+		AssertEqual(t, resMap["phone"], userParam["phone"])
+		AssertEqual(t, resMap["age"], (userParam["age"]))
 	} else {
 		t.Errorf("can not set Post handlers, response body is: %s", response.Body.String())
 	}
 
-	gtester.AssertEqual(t, faker.Routers[0].Model.Set.Has(gset.T(4)), true)
+	AssertEqual(t, faker.Routers[0].Model.Set.Has(gset.T(4)), true)
 
 	// PATCH /users/:id
 	userEditedAttrPatch := map[string]interface{}{"name": "Vincent"}
 	response, _ = httpmock.PATCH("/users/4", userEditedAttrPatch)
-	gtester.AssertEqual(t, response.Code, http.StatusOK)
+	AssertEqual(t, response.Code, http.StatusOK)
 
 	respJSON = response.JSON()
 	if resMap, ok := respJSON.(map[string]interface{}); ok {
-		gtester.AssertEqual(t, resMap["id"], float64(4))
-		gtester.AssertEqual(t, resMap["name"], userEditedAttrPatch["name"])
-		gtester.AssertEqual(t, resMap["phone"], userParam["phone"])
-		gtester.AssertEqual(t, resMap["age"], userParam["age"])
+		AssertEqual(t, resMap["id"], float64(4))
+		AssertEqual(t, resMap["name"], userEditedAttrPatch["name"])
+		AssertEqual(t, resMap["phone"], userParam["phone"])
+		AssertEqual(t, resMap["age"], userParam["age"])
 	} else {
 		t.Errorf("can not set PATCH handlers, response body is: %s", response.Body.String())
 	}
@@ -79,22 +79,22 @@ func TestSetHandlers(t *testing.T) {
 	// PUT /users/:id
 	userEditedAttrPut := map[string]interface{}{"name": "Vincent", "phone": "13213213217", "age": "23"}
 	response, _ = httpmock.PUT("/users/4", userEditedAttrPut)
-	gtester.AssertEqual(t, response.Code, http.StatusOK)
+	AssertEqual(t, response.Code, http.StatusOK)
 
 	respJSON = response.JSON()
 	if resMap, ok := respJSON.(map[string]interface{}); ok {
-		gtester.AssertEqual(t, resMap["id"], float64(4))
-		gtester.AssertEqual(t, resMap["name"], userEditedAttrPut["name"])
-		gtester.AssertEqual(t, resMap["phone"], userEditedAttrPut["phone"])
-		gtester.AssertEqual(t, resMap["age"], userEditedAttrPut["age"])
+		AssertEqual(t, resMap["id"], float64(4))
+		AssertEqual(t, resMap["name"], userEditedAttrPut["name"])
+		AssertEqual(t, resMap["phone"], userEditedAttrPut["phone"])
+		AssertEqual(t, resMap["age"], userEditedAttrPut["age"])
 	} else {
 		t.Errorf("can not set PATCH handlers, response body is: %s", response.Body.String())
 	}
 
 	// DELETE /users/:id
 	response = httpmock.DELETE("/users/4", nil)
-	gtester.AssertEqual(t, response.Code, http.StatusOK)
-	gtester.AssertEqual(t, faker.Routers[0].Model.Has(4), false)
+	AssertEqual(t, response.Code, http.StatusOK)
+	AssertEqual(t, faker.Routers[0].Model.Has(4), false)
 }
 
 func TestMountTo(t *testing.T) {
@@ -109,9 +109,9 @@ func TestMountTo(t *testing.T) {
 	httpmock.ListenAndServe("localhost", faker)
 
 	response := httpmock.GET("/greet", nil)
-	gtester.AssertEqual(t, response.Body.String(), "hello world")
+	AssertEqual(t, response.Body.String(), "hello world")
 
 	response = httpmock.GET("/fake_api/users/1", nil)
-	gtester.AssertEqual(t, response.Code, http.StatusOK)
-	gtester.AssertResponseEqual(t, response, usersFixture[0])
+	AssertEqual(t, response.Code, http.StatusOK)
+	AssertResponseEqual(t, response, usersFixture[0])
 }
