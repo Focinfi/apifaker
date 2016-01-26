@@ -200,12 +200,14 @@ func (model *Model) setItems() {
 	}
 }
 
+// SetToSeeds
 func (model *Model) SetToSeeds() {
 	models := model.ToLineItems()
 	sort.Sort(models)
 	model.Seeds = models.ToSlice()
 }
 
+// SaveToFile save model to file with the given path
 func (model *Model) SaveToFile(path string) error {
 	// open file
 	file, err := os.Create(path)

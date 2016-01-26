@@ -69,6 +69,7 @@ func (r *Router) setRestRoutes() {
 	}
 }
 
+// SaveToFile
 func (r *Router) SaveToFile() error {
 	return r.Model.SaveToFile(r.filePath)
 }
