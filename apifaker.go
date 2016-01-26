@@ -1,7 +1,6 @@
 package apifaker
 
 import (
-	"github.com/Focinfi/gset"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"os"
@@ -163,7 +162,7 @@ func (af *ApiFaker) setHandlers(prefix string) {
 					}
 
 					// delete
-					model.Remove(gset.T(id))
+					model.Delete(id)
 					ctx.JSON(http.StatusOK, nil)
 				})
 			}

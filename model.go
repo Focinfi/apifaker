@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"sync"
 )
 
 var ColumnCountError = fmt.Errorf("Has wrong count of columns")
@@ -24,13 +25,14 @@ type Model struct {
 	Seeds   []map[string]interface{} `json:"seeds"`
 	Columns []Column                 `json:"columns"`
 
-	// Set Compose *gset.Set to contains data
-	*gset.Set `json:"-"`
+	// SetThreadSafe Compose *gset.SetThreadSafe to contains data
+	Set *gset.SetThreadSafe `json:"-"`
 
 	// filePath json file path
 	filePath string `json:"-"`
 	// currentId record the number of times of adding
 	currentId int `json:"-"`
+	sync.Mutex
 }
 
 // NewModel allocates and returns a new Model
@@ -38,7 +40,7 @@ func NewModel() *Model {
 	return &Model{
 		Seeds:   []map[string]interface{}{},
 		Columns: []Column{},
-		Set:     gset.NewSet(),
+		Set:     gset.NewSetThreadSafe(),
 	}
 }
 
@@ -46,6 +48,11 @@ func NewModel() *Model {
 func (model *Model) nextId() int {
 	model.currentId++
 	return model.currentId
+}
+
+// Has return if m has LineItem with id param
+func (m *Model) Has(id int) bool {
+	return m.Set.Has(gset.T(id))
 }
 
 // Get get and return element with id param, also return
@@ -60,6 +67,9 @@ func (model Model) Get(id int) (li LineItem, ok bool) {
 
 // Add add a LineItem to Model.Set
 func (model *Model) Add(li LineItem) error {
+	model.Lock()
+	defer model.Unlock()
+
 	if err := model.checkSeed(li.ToMap()); err != nil {
 		return err
 	} else {
@@ -75,7 +85,7 @@ func (model *Model) Update(id int, li *LineItem) error {
 	if err := model.checkSeed(li.dataMap); err != nil {
 		return err
 	} else {
-		if model.Has(gset.T(id)) {
+		if model.Set.Has(gset.T(id)) {
 			li.Set("id", id)
 			model.Set.Add(li)
 		} else {
@@ -84,6 +94,11 @@ func (model *Model) Update(id int, li *LineItem) error {
 	}
 
 	return nil
+}
+
+// Delete
+func (m *Model) Delete(id int) {
+	m.Set.Remove(gset.T(id))
 }
 
 // ToLineItems allocate a new LineItems filled with
@@ -176,7 +191,7 @@ func (model *Model) checkSeeds() error {
 // setItems
 func (model *Model) setItems() {
 	if model.Set == nil {
-		model.Set = gset.NewSet()
+		model.Set = gset.NewSetThreadSafe()
 	}
 	for _, seed := range model.Seeds {
 		model.Add(NewLineItemWithMap(seed))
