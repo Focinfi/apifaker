@@ -34,8 +34,8 @@ type Model struct {
 	currentId int `json:"-"`
 
 	// dataChanged record the sign if this Model's Set have been changed
-	dataChanged bool `json:"_"`
-	sync.Mutex  `json:"_"`
+	dataChanged bool `json:"-"`
+	sync.Mutex  `json:"-"`
 }
 
 // NewModel allocates and returns a new Model
