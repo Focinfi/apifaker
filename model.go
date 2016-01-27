@@ -4,21 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Focinfi/gset"
+	"github.com/Focinfi/gtester"
 	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"reflect"
 	"sort"
 	"sync"
 )
-
-var ColumnCountError = fmt.Errorf("Has wrong count of columns")
-var ColumnNameError = fmt.Errorf("Has wrong column")
-
-type Column struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
-}
 
 type Model struct {
 	Name string `json:"resource_name"`
@@ -163,6 +157,17 @@ func (model *Model) UpdateWithAllAttrsInGinContex(id int, ctx *gin.Context) (int
 	}
 }
 
+// checkColumnsType
+func (model *Model) checkColumnsType() error {
+	for _, column := range model.Columns {
+		if err := column.CheckTypeMeta(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // checkSeed check specific seed
 func (model *Model) checkSeed(seed map[string]interface{}) error {
 	columns := model.Columns
@@ -173,11 +178,21 @@ func (model *Model) checkSeed(seed map[string]interface{}) error {
 	}
 
 	for _, column := range columns {
-		if _, ok := seed[column.Name]; !ok {
-			ColumnNameError = fmt.Errorf("has wrong column: %s", column.Name)
+		if seedVal, ok := seed[column.Name]; !ok {
+			ColumnNameError = fmt.Errorf("has not column: %s", column.Name)
 			return ColumnNameError
+		} else {
+			// check type
+			typeElement, _ := jsonTypes.Get(column.Type)
+			goType := typeElement.(JsonType).GoType()
+			seedType := reflect.TypeOf(seedVal).String()
+			if seedType != goType {
+				ColumnTypeError = fmt.Errorf("column[%s] type is wrong, expected %s, current is %s", column.Name, goType, seedType)
+				return ColumnTypeError
+			}
+
+			// TODO: check length
 		}
-		// TODO: check type
 	}
 
 	return nil
@@ -262,11 +277,16 @@ func NewModelWithPath(path string) (*Model, error) {
 	if err = json.Unmarshal(bytes, model); err != nil {
 		err = fmt.Errorf("[apifaker] json format error: %s, file: %s", err.Error(), path)
 	} else {
-		// check Seeds
-		err = model.checkSeeds()
+		// use CheckQueue to check columns and seeds
+		cq := gtester.NewCheckQueue()
+		err =
+			cq.Add(func() error {
+				return model.checkSeeds()
+			}).Add(func() error {
+				return model.checkColumnsType()
+			}).Run()
 
-		// set items
-		if err == nil {
+		if cq.Err == nil {
 			model.setItems()
 		}
 	}

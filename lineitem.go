@@ -3,6 +3,7 @@ package apifaker
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"strconv"
 )
 
 type LineItem struct {
@@ -22,8 +23,22 @@ func NewLineItemWithGinContext(ctx *gin.Context, r *Model) (LineItem, error) {
 	li := LineItem{make(map[string]interface{})}
 	for _, column := range r.Columns {
 		if value := ctx.PostForm(column.Name); value != "" {
-			// TODO: check type
-			li.Set(column.Name, value)
+			switch column.Type {
+			case number.Element():
+				if numberVal, err := strconv.ParseFloat(value, 64); err != nil {
+					return li, err
+				} else {
+					li.Set(column.Name, numberVal)
+				}
+			case boolean.Element():
+				if booleanVal, err := strconv.ParseBool(value); err != nil {
+					return li, err
+				} else {
+					li.Set(column.Name, booleanVal)
+				}
+			default:
+				li.Set(column.Name, value)
+			}
 		} else {
 			ColumnNameError = fmt.Errorf("doesn't has column: %s", column.Name)
 			return li, ColumnNameError

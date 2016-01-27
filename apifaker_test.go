@@ -12,13 +12,13 @@ import (
 var testDir = os.Getenv("GOPATH") + "/src/github.com/Focinfi/apifaker/api_static_test"
 
 var userParam = map[string]interface{}{
-	"name": "Ameng", "phone": "13213213214", "age": "22",
+	"name": "Ameng", "phone": "13213213214", "age": float64(22),
 }
 
 var usersFixture = []map[string]interface{}{
-	{"id": 1, "name": "Frank", "phone": "13213213213", "age": 22},
-	{"id": 2, "name": "Antony", "phone": "13213213211", "age": 22},
-	{"id": 3, "name": "Foci", "phone": "13213213212", "age": 22},
+	{"id": 1, "name": "Frank", "phone": "13213213213", "age": float64(22)},
+	{"id": 2, "name": "Antony", "phone": "13213213211", "age": float64(22)},
+	{"id": 3, "name": "Foci", "phone": "13213213212", "age": float64(22)},
 }
 
 func TestNewWithApiDir(t *testing.T) {
@@ -48,6 +48,7 @@ func TestSetHandlers(t *testing.T) {
 	// POST /users
 	response, _ = httpmock.POSTForm("/users", userParam)
 	AssertEqual(t, response.Code, http.StatusOK)
+	t.Log(response.Body)
 
 	respJSON := response.JSON()
 	if resMap, ok := respJSON.(map[string]interface{}); ok {
@@ -77,7 +78,7 @@ func TestSetHandlers(t *testing.T) {
 	}
 
 	// PUT /users/:id
-	userEditedAttrPut := map[string]interface{}{"name": "Vincent", "phone": "13213213217", "age": "23"}
+	userEditedAttrPut := map[string]interface{}{"name": "Vincent", "phone": "13213213217", "age": float64(23)}
 	response, _ = httpmock.PUT("/users/4", userEditedAttrPut)
 	AssertEqual(t, response.Code, http.StatusOK)
 
