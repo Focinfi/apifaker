@@ -21,10 +21,10 @@ Rules:
 
 1. `"resource_name"` string, resource name for this api route, you can see it as a table name when using database.
 
-2. `"columns"` array, columuns for resource, support `"name", "type"`
-  1. `"name"` and `"type"` are required.
-  2. `"type"` support: `"boolean" "number" "string" "array" "object"`
-  3. these types will be used to check every item data.
+2. `"columns"` array, columuns for resource, support `"name"`, `"type"`, `"regexp_pattern"`
+    1. `"name"` and `"type"` are required.
+    2. `"type"` supports: `"boolean" "number" "string" "array" "object"`, these types will be used to check every item data.
+    3. `"regexp_pattern"` add regular expression for your string-type column, using internal `regexp` package, you could run `go doc regexp/syntax` to see all syntax.
 
 3. `"seed"` array, lineitems for this resource, note that every lineitem of seeds should has columns descriped in `"columns"` array, otherwise, it will throw an non-nil error.
 
