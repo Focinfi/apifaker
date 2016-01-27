@@ -4,12 +4,14 @@
         {
             "name": "name",
             "type": "string",
-            "regexp_pattern": "[A-z]|[0-9]"
+            "regexp_pattern": "[A-z]|[0-9]",
+            "unique": true
         },
         {
             "name": "phone",
             "type": "string",
-            "regexp_pattern": "132.*"
+            "regexp_pattern": "132.*",
+            "unique": true
         },
         {
             "name": "age",

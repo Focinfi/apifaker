@@ -9,6 +9,7 @@ import (
 var ColumnCountError = fmt.Errorf("Has wrong count of columns")
 var ColumnNameError = fmt.Errorf("Has wrong column")
 var ColumnTypeError = fmt.Errorf("Column type wrong")
+var ColumnUniqueError = fmt.Errorf("Column already exists")
 
 type JsonType string
 
@@ -44,10 +45,11 @@ const (
 var jsonTypes = NewSet(boolean, number, str, array, object)
 
 type Column struct {
-	Name          string `json:"name"`
-	Type          string `json:"type"`
-	Unique        bool   `json:"unique"`
-	RegexpPattern string `json:"regexp_pattern"`
+	Name          string         `json:"name"`
+	Type          string         `json:"type"`
+	Unique        bool           `json:"unique"`
+	RegexpPattern string         `json:"regexp_pattern"`
+	uniqueValues  *SetThreadSafe `json:"-"`
 }
 
 // CheckType check type if is in the jsonTypes
@@ -73,4 +75,41 @@ func (c Column) CheckMeta() error {
 	}
 
 	return nil
+}
+
+func (c *Column) CheckUniqueOf(value interface{}) bool {
+	if !c.Unique {
+		return true
+	}
+
+	if c.uniqueValues == nil {
+		c.uniqueValues = NewSetThreadSafe()
+		return true
+	} else {
+		return !c.uniqueValues.Has(T(value))
+	}
+}
+
+func (c *Column) AddValue(value interface{}) {
+	if !c.Unique {
+		return
+	}
+
+	if c.uniqueValues == nil {
+		c.uniqueValues = NewSetThreadSafe(T(value))
+	} else {
+		c.uniqueValues.Add(T(value))
+	}
+}
+
+func (c *Column) RemoveValue(value interface{}) {
+	if !c.Unique {
+		return
+	}
+
+	if c.uniqueValues == nil {
+		c.uniqueValues = NewSetThreadSafe()
+	} else {
+		c.uniqueValues.Remove(T(value))
+	}
 }

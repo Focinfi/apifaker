@@ -19,9 +19,9 @@ func TestNewModelWithPath(t *testing.T) {
 func TestCheckModelColumns(t *testing.T) {
 	// has wrong columns count
 	model, _ := NewModelWithPath(testDir + "/users.json")
-	model.Seeds = append(model.Seeds, map[string]interface{}{})
+	model.Seeds[0] = map[string]interface{}{}
 	if err := model.checkSeeds(); err != ColumnCountError {
-		t.Error("Can not detect columns count of seed item")
+		t.Errorf("Can not detect columns count of seed item, err is %v", err)
 	}
 
 	// has wrong column
@@ -77,4 +77,7 @@ func TestCheckSeed(t *testing.T) {
 
 	model.Seeds[1]["name"] = ",,,"
 	AssertError(t, model.checkSeed(model.Seeds[1]))
+
+	model.Seeds[2]["name"] = model.Seeds[0]["name"]
+	AssertError(t, model.checkSeed(model.Seeds[2]))
 }

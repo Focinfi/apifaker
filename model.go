@@ -20,7 +20,7 @@ type Model struct {
 
 	// Seeds contains value of "seeds" in json files
 	Seeds   []map[string]interface{} `json:"seeds"`
-	Columns []Column                 `json:"columns"`
+	Columns []*Column                `json:"columns"`
 
 	// Set Compose *gset.SetThreadSafe to contains data
 	Set *gset.SetThreadSafe `json:"-"`
@@ -37,7 +37,7 @@ type Model struct {
 func NewModel() *Model {
 	return &Model{
 		Seeds:   []map[string]interface{}{},
-		Columns: []Column{},
+		Columns: []*Column{},
 		Set:     gset.NewSetThreadSafe(),
 	}
 }
@@ -74,6 +74,7 @@ func (model *Model) Add(li LineItem) error {
 		li.Set("id", model.nextId())
 		model.Set.Add(li)
 		model.dataChanged = true
+		model.addUniqueValues(li)
 	}
 
 	return nil
@@ -81,6 +82,9 @@ func (model *Model) Add(li LineItem) error {
 
 // Update a LineItem in Model
 func (model *Model) Update(id int, li *LineItem) error {
+	model.Lock()
+	defer model.Unlock()
+
 	if err := model.checkSeed(li.dataMap); err != nil {
 		return err
 	} else {
@@ -88,6 +92,7 @@ func (model *Model) Update(id int, li *LineItem) error {
 			li.Set("id", id)
 			model.Set.Add(li)
 			model.dataChanged = true
+			model.addUniqueValues(*li)
 		} else {
 			return fmt.Errorf("model[id:%d] does not exsit", id)
 		}
@@ -98,8 +103,14 @@ func (model *Model) Update(id int, li *LineItem) error {
 
 // Delete
 func (model *Model) Delete(id int) {
+	model.Lock()
+	defer model.Unlock()
+
+	value, _ := model.Set.Get(id)
+
 	model.Set.Remove(gset.T(id))
 	model.dataChanged = true
+	model.removeUniqueValues(value.(*LineItem))
 }
 
 // ToLineItems allocate a new LineItems filled with
@@ -113,6 +124,26 @@ func (model Model) ToLineItems() LineItems {
 		}
 	}
 	return LineItems(lis)
+}
+
+func (model *Model) addUniqueValues(lis ...LineItem) {
+	for _, li := range lis {
+		for _, column := range model.Columns {
+			if value, ok := li.Get(column.Name); ok {
+				column.AddValue(value)
+			}
+		}
+	}
+}
+
+func (model *Model) removeUniqueValues(lis ...*LineItem) {
+	for _, li := range lis {
+		for _, column := range model.Columns {
+			if value, ok := li.Get(column.Name); ok {
+				column.RemoveValue(value)
+			}
+		}
+	}
 }
 
 // UpdateWithAttrsInGinContext find a LineItem with id param,
@@ -200,6 +231,12 @@ func (model *Model) checkSeed(seed map[string]interface{}) error {
 				} else if !matched {
 					return fmt.Errorf("colmun[%s]: %#v, doesn't match %s", column.Name, seedVal, column.RegexpPattern)
 				}
+			}
+
+			// check uniqueness
+			if !column.CheckUniqueOf(seedVal) {
+				ColumnUniqueError = fmt.Errorf("cloumn[%s]: %v already exists", column.Name, seedVal)
+				return ColumnUniqueError
 			}
 		}
 	}
@@ -297,6 +334,7 @@ func NewModelWithPath(path string) (*Model, error) {
 
 		if cq.Err == nil {
 			model.setItems()
+			model.addUniqueValues(model.ToLineItems()...)
 		}
 	}
 
