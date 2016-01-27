@@ -67,11 +67,14 @@ func TestSaveToFile(t *testing.T) {
 func TestCheckColumnsTypes(t *testing.T) {
 	model, _ := NewModelWithPath(testDir + "/users.json")
 	model.Columns[0].Type = "unsupportted_type"
-	AssertError(t, model.checkColumnsType())
+	AssertError(t, model.checkColumnsMeta())
 }
 
 func TestCheckSeed(t *testing.T) {
 	model, _ := NewModelWithPath(testDir + "/users.json")
 	model.Seeds[0]["age"] = "22"
 	AssertError(t, model.checkSeed(model.Seeds[0]))
+
+	model.Seeds[1]["name"] = ",,,"
+	AssertError(t, model.checkSeed(model.Seeds[1]))
 }

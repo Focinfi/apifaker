@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"regexp"
 	"sort"
 	"sync"
 )
@@ -157,10 +158,10 @@ func (model *Model) UpdateWithAllAttrsInGinContex(id int, ctx *gin.Context) (int
 	}
 }
 
-// checkColumnsType
-func (model *Model) checkColumnsType() error {
+// checkColumnsMeta
+func (model *Model) checkColumnsMeta() error {
 	for _, column := range model.Columns {
-		if err := column.CheckTypeMeta(); err != nil {
+		if err := column.CheckMeta(); err != nil {
 			return err
 		}
 	}
@@ -191,7 +192,15 @@ func (model *Model) checkSeed(seed map[string]interface{}) error {
 				return ColumnTypeError
 			}
 
-			// TODO: check length
+			// check regexp pattern matching
+			if column.RegexpPattern != "" && column.Type == str.Element() {
+				matched, err := regexp.Match(column.RegexpPattern, []byte(seedVal.(string)))
+				if err != nil {
+					return fmt.Errorf("column regexp %s has format error", column.RegexpPattern)
+				} else if !matched {
+					return fmt.Errorf("colmun[%s]: %#v, doesn't match %s", column.Name, seedVal, column.RegexpPattern)
+				}
+			}
 		}
 	}
 
@@ -283,7 +292,7 @@ func NewModelWithPath(path string) (*Model, error) {
 			cq.Add(func() error {
 				return model.checkSeeds()
 			}).Add(func() error {
-				return model.checkColumnsType()
+				return model.checkColumnsMeta()
 			}).Run()
 
 		if cq.Err == nil {

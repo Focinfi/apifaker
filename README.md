@@ -36,11 +36,13 @@ Here is an example for users.json
     "columns": [
         {
             "name": "name",
-            "type": "string"
+            "type": "string",
+            "regexp_pattern": "[A-z]|[0-9]"
         },
         {
             "name": "phone",
-            "type": "string"
+            "type": "string",
+            "regexp_pattern": "132.*"
         },
         {
             "name": "age",
