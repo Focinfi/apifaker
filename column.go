@@ -77,6 +77,7 @@ func (c Column) CheckMeta() error {
 	return nil
 }
 
+// CheckUniqueOf check if the given value exists
 func (c *Column) CheckUniqueOf(value interface{}) bool {
 	if !c.Unique {
 		return true
@@ -90,6 +91,7 @@ func (c *Column) CheckUniqueOf(value interface{}) bool {
 	}
 }
 
+// AddValue add the give value into the Column's uniqueValues
 func (c *Column) AddValue(value interface{}) {
 	if !c.Unique {
 		return
@@ -102,6 +104,7 @@ func (c *Column) AddValue(value interface{}) {
 	}
 }
 
+// RemoveValue remove the given value from Column's uniqueValues
 func (c *Column) RemoveValue(value interface{}) {
 	if !c.Unique {
 		return

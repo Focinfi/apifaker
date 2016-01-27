@@ -126,6 +126,7 @@ func (model Model) ToLineItems() LineItems {
 	return LineItems(lis)
 }
 
+// addUniqueValues add values of Lineitem into corresponding Column's uniqueValues
 func (model *Model) addUniqueValues(lis ...LineItem) {
 	for _, li := range lis {
 		for _, column := range model.Columns {
@@ -136,6 +137,7 @@ func (model *Model) addUniqueValues(lis ...LineItem) {
 	}
 }
 
+// removeUniqueValues reomve values of Lineitem into corresponding Column's uniqueValues
 func (model *Model) removeUniqueValues(lis ...*LineItem) {
 	for _, li := range lis {
 		for _, column := range model.Columns {
@@ -297,6 +299,7 @@ func (model *Model) SaveToFile(path string) error {
 	}
 	_, err = file.WriteString(string(bytes))
 
+	// set dataChanged to false
 	if err == nil {
 		model.dataChanged = false
 	}
@@ -324,15 +327,13 @@ func NewModelWithPath(path string) (*Model, error) {
 		err = fmt.Errorf("[apifaker] json format error: %s, file: %s", err.Error(), path)
 	} else {
 		// use CheckQueue to check columns and seeds
-		cq := gtester.NewCheckQueue()
-		err =
-			cq.Add(func() error {
-				return model.checkSeeds()
-			}).Add(func() error {
-				return model.checkColumnsMeta()
-			}).Run()
+		err = gtester.NewCheckQueue().Add(func() error {
+			return model.checkSeeds()
+		}).Add(func() error {
+			return model.checkColumnsMeta()
+		}).Run()
 
-		if cq.Err == nil {
+		if err == nil {
 			model.setItems()
 			model.addUniqueValues(model.ToLineItems()...)
 		}
