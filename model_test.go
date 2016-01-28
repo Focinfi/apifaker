@@ -72,12 +72,21 @@ func TestCheckColumnsTypes(t *testing.T) {
 
 func TestCheckSeed(t *testing.T) {
 	model, _ := NewModelWithPath(testDir + "/users.json")
+	// type
 	model.Seeds[0]["age"] = "22"
 	AssertError(t, model.checkSeed(model.Seeds[0]))
 
+	// regexp
 	model.Seeds[1]["name"] = ",,,"
 	AssertError(t, model.checkSeed(model.Seeds[1]))
 
+	// uniqueness
 	model.Seeds[2]["name"] = model.Seeds[0]["name"]
 	AssertError(t, model.checkSeed(model.Seeds[2]))
+
+	// reset after delete
+	firstLi, _ := model.Get(0)
+	toDeleteName, _ := firstLi.Get("name")
+	model.Delete(0)
+	AssertEqual(t, model.Columns[0].CheckUniqueOf(toDeleteName), true)
 }
