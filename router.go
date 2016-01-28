@@ -74,6 +74,7 @@ func (r *Router) SaveToFile() error {
 	return r.Model.SaveToFile(r.filePath)
 }
 
+// NewRouterWithPath allocates and returns a new Router with the givn file path
 func NewRouterWithPath(path string) (*Router, error) {
 	model, err := NewModelWithPath(path)
 	if err != nil {

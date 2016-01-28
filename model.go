@@ -9,8 +9,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"reflect"
-	"regexp"
 	"sort"
 	"sync"
 )
@@ -92,6 +90,7 @@ func (model *Model) Update(id int, li *LineItem) error {
 			li.Set("id", id)
 			model.Set.Add(li)
 			model.dataChanged = true
+			model.removeUniqueValues(li)
 			model.addUniqueValues(*li)
 		} else {
 			return fmt.Errorf("model[id:%d] does not exsit", id)
@@ -161,8 +160,11 @@ func (model *Model) UpdateWithAttrsInGinContext(id int, ctx *gin.Context) (int, 
 	// update model
 	for _, column := range model.Columns {
 		if value := ctx.PostForm(column.Name); value != "" {
-			// TODO: check type
-			li.Set(column.Name, value)
+			if err := column.CheckValue(value); err != nil {
+				return http.StatusBadRequest, map[string]interface{}{"message": err.Error()}
+			} else {
+				li.Set(column.Name, value)
+			}
 		}
 	}
 	return http.StatusOK, li.ToMap()
@@ -178,12 +180,19 @@ func (model *Model) UpdateWithAllAttrsInGinContex(id int, ctx *gin.Context) (int
 	if !ok {
 		return http.StatusNotFound, nil
 	}
+	fmt.Println("[Update found]", ok)
 
-	// create a new item
-	newItem, err := NewLineItemWithGinContext(ctx, model)
-	// update item
-	model.Update(id, &newItem)
+	// update this li with a new item
+	var newItem LineItem
+	err := gtester.NewCheckQueue().Add(func() error {
+		var err error
+		newItem, err = NewLineItemWithGinContext(ctx, model)
+		return err
+	}).Add(func() error {
+		return model.Update(id, &newItem)
+	}).Run()
 
+	// check err
 	if err != nil {
 		return http.StatusBadRequest, map[string]string{"message": err.Error()}
 	} else {
@@ -216,30 +225,8 @@ func (model *Model) checkSeed(seed map[string]interface{}) error {
 			ColumnNameError = fmt.Errorf("has not column: %s", column.Name)
 			return ColumnNameError
 		} else {
-			// check type
-			typeElement, _ := jsonTypes.Get(column.Type)
-			goType := typeElement.(JsonType).GoType()
-			seedType := reflect.TypeOf(seedVal).String()
-			if seedType != goType {
-				ColumnTypeError = fmt.Errorf("column[%s] type is wrong, expected %s, current is %s", column.Name, goType, seedType)
-				return ColumnTypeError
-			}
-
-			// check regexp pattern matching
-			if column.RegexpPattern != "" && column.Type == str.Element() {
-				matched, err := regexp.Match(column.RegexpPattern, []byte(seedVal.(string)))
-				if err != nil {
-					return fmt.Errorf("column regexp %s has format error", column.RegexpPattern)
-				} else if !matched {
-					return fmt.Errorf("colmun[%s]: %#v, doesn't match %s", column.Name, seedVal, column.RegexpPattern)
-				}
-			}
-
-			// check uniqueness
-			if !column.CheckUniqueOf(seedVal) {
-				ColumnUniqueError = fmt.Errorf("cloumn[%s]: %v already exists", column.Name, seedVal)
-				return ColumnUniqueError
-			}
+			// check seedVal
+			return column.CheckValue(seedVal)
 		}
 	}
 

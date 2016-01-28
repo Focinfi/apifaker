@@ -132,6 +132,3 @@ PATCH   /fake_api/users/:id
 DELETE  /fake_api/users/:id
 ```
 
-### TODO
-2. Add relationship for deferent resources. like one2one, one2many, many2many.
-

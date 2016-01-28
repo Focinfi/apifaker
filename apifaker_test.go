@@ -15,6 +15,10 @@ var userParam = map[string]interface{}{
 	"name": "Ameng", "phone": "13213213214", "age": float64(22),
 }
 
+var invalidUserParam = map[string]interface{}{
+	"name": ",,,", "phone": "13013213214", "age": "22",
+}
+
 var usersFixture = []map[string]interface{}{
 	{"id": 1, "name": "Frank", "phone": "13213213213", "age": float64(22)},
 	{"id": 2, "name": "Antony", "phone": "13213213211", "age": float64(22)},
@@ -46,9 +50,9 @@ func TestSetHandlers(t *testing.T) {
 	AssertEqual(t, response.Code, http.StatusBadRequest)
 
 	// POST /users
+	// 	with valid params
 	response, _ = httpmock.POSTForm("/users", userParam)
 	AssertEqual(t, response.Code, http.StatusOK)
-	t.Log(response.Body)
 
 	respJSON := response.JSON()
 	if resMap, ok := respJSON.(map[string]interface{}); ok {
@@ -59,10 +63,14 @@ func TestSetHandlers(t *testing.T) {
 	} else {
 		t.Errorf("can not set Post handlers, response body is: %s", response.Body.String())
 	}
-
 	AssertEqual(t, faker.Routers[0].Model.Set.Has(gset.T(4)), true)
 
+	// 	with invalid params
+	response, _ = httpmock.POSTForm("/users", invalidUserParam)
+	AssertEqual(t, response.Code, http.StatusBadRequest)
+
 	// PATCH /users/:id
+	// 	with valid params
 	userEditedAttrPatch := map[string]interface{}{"name": "Vincent"}
 	response, _ = httpmock.PATCH("/users/4", userEditedAttrPatch)
 	AssertEqual(t, response.Code, http.StatusOK)
@@ -77,7 +85,12 @@ func TestSetHandlers(t *testing.T) {
 		t.Errorf("can not set PATCH handlers, response body is: %s", response.Body.String())
 	}
 
+	// 	with invalid params
+	response, _ = httpmock.PATCH("/users/4", invalidUserParam)
+	AssertEqual(t, response.Code, http.StatusBadRequest)
+
 	// PUT /users/:id
+	// 	with valid params
 	userEditedAttrPut := map[string]interface{}{"name": "Vincent", "phone": "13213213217", "age": float64(23)}
 	response, _ = httpmock.PUT("/users/4", userEditedAttrPut)
 	AssertEqual(t, response.Code, http.StatusOK)

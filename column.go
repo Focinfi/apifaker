@@ -3,6 +3,7 @@ package apifaker
 import (
 	"fmt"
 	. "github.com/Focinfi/gset"
+	"reflect"
 	"regexp"
 )
 
@@ -72,6 +73,36 @@ func (c Column) CheckMeta() error {
 		if _, err := regexp.Compile(c.RegexpPattern); err != nil {
 			return fmt.Errorf("regexp pattern format[%s] is wrong, err is: %s", c.RegexpPattern, err.Error())
 		}
+	}
+
+	return nil
+}
+
+// CheckValue check value if valid
+func (column *Column) CheckValue(seedVal interface{}) error {
+	// check type
+	typeElement, _ := jsonTypes.Get(column.Type)
+	goType := typeElement.(JsonType).GoType()
+	seedType := reflect.TypeOf(seedVal).String()
+	if seedType != goType {
+		ColumnTypeError = fmt.Errorf("column[%s] type is wrong, expected %s, current is %s", column.Name, goType, seedType)
+		return ColumnTypeError
+	}
+
+	// check regexp pattern matching
+	if column.RegexpPattern != "" && column.Type == str.Element() {
+		matched, err := regexp.Match(column.RegexpPattern, []byte(seedVal.(string)))
+		if err != nil {
+			return fmt.Errorf("column regexp %s has format error", column.RegexpPattern)
+		} else if !matched {
+			return fmt.Errorf("colmun[%s]: %#v, doesn't match %s", column.Name, seedVal, column.RegexpPattern)
+		}
+	}
+
+	// check uniqueness
+	if !column.CheckUniqueOf(seedVal) {
+		ColumnUniqueError = fmt.Errorf("cloumn[%s]: %v already exists", column.Name, seedVal)
+		return ColumnUniqueError
 	}
 
 	return nil
