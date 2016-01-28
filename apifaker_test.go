@@ -64,6 +64,7 @@ func TestSetHandlers(t *testing.T) {
 		t.Errorf("can not set Post handlers, response body is: %s", response.Body.String())
 	}
 	AssertEqual(t, faker.Routers[0].Model.Set.Has(gset.T(4)), true)
+	t.Logf("[Slice] %#v ", faker.Routers[0].Model.Set.ToSlice())
 
 	// 	with invalid params
 	response, _ = httpmock.POSTForm("/users", invalidUserParam)
@@ -104,6 +105,10 @@ func TestSetHandlers(t *testing.T) {
 	} else {
 		t.Errorf("can not set PATCH handlers, response body is: %s", response.Body.String())
 	}
+
+	// with invalid params
+	response, _ = httpmock.PUT("/users/4", userEditedAttrPut)
+	AssertEqual(t, response.Code, http.StatusBadRequest)
 
 	// DELETE /users/:id
 	response = httpmock.DELETE("/users/4", nil)

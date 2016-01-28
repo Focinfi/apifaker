@@ -88,9 +88,9 @@ func (model *Model) Update(id int, li *LineItem) error {
 	} else {
 		if model.Set.Has(gset.T(id)) {
 			li.Set("id", id)
-			model.Set.Add(li)
+			model.Set.Add(*li)
 			model.dataChanged = true
-			model.removeUniqueValues(li)
+			model.removeUniqueValues(*li)
 			model.addUniqueValues(*li)
 		} else {
 			return fmt.Errorf("model[id:%d] does not exsit", id)
@@ -105,11 +105,11 @@ func (model *Model) Delete(id int) {
 	model.Lock()
 	defer model.Unlock()
 
-	value, _ := model.Set.Get(id)
+	li, _ := model.Get(id)
 
 	model.Set.Remove(gset.T(id))
 	model.dataChanged = true
-	model.removeUniqueValues(value.(*LineItem))
+	model.removeUniqueValues(li)
 }
 
 // ToLineItems allocate a new LineItems filled with
@@ -137,7 +137,7 @@ func (model *Model) addUniqueValues(lis ...LineItem) {
 }
 
 // removeUniqueValues reomve values of Lineitem into corresponding Column's uniqueValues
-func (model *Model) removeUniqueValues(lis ...*LineItem) {
+func (model *Model) removeUniqueValues(lis ...LineItem) {
 	for _, li := range lis {
 		for _, column := range model.Columns {
 			if value, ok := li.Get(column.Name); ok {
@@ -180,7 +180,6 @@ func (model *Model) UpdateWithAllAttrsInGinContex(id int, ctx *gin.Context) (int
 	if !ok {
 		return http.StatusNotFound, nil
 	}
-	fmt.Println("[Update found]", ok)
 
 	// update this li with a new item
 	var newItem LineItem
