@@ -27,9 +27,9 @@ func (j JsonType) GoType() string {
 	case str:
 		return "string"
 	case array:
-		return "[]map[string]interface{}"
+		return "[]interface {}"
 	case object:
-		return "map[string]interface{}"
+		return "map[string]interface {}"
 	}
 	return "nil"
 }
