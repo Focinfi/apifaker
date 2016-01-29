@@ -22,7 +22,7 @@ type ApiFaker struct {
 	ApiDir string
 
 	// Routers a array of pointer for Router
-	Routers []*Router
+	Routers map[string]*Router
 
 	// TrueMux external mux for the real api
 	TrueMux http.Handler
@@ -38,7 +38,7 @@ func NewWithApiDir(dir string) (*ApiFaker, error) {
 	faker := &ApiFaker{
 		Engine:  gin.Default(),
 		ApiDir:  dir,
-		Routers: []*Router{},
+		Routers: map[string]*Router{},
 	}
 
 	err := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
@@ -51,7 +51,11 @@ func NewWithApiDir(dir string) (*ApiFaker, error) {
 		var router *Router
 		if strings.HasSuffix(path, ".json") {
 			if router, err = NewRouterWithPath(path); err == nil {
-				faker.Routers = append(faker.Routers, router)
+				if _, ok := faker.Routers[router.Model.Name]; ok {
+					panic(router.Model.Name + " has been existed")
+				} else {
+					faker.Routers[router.Model.Name] = router
+				}
 			}
 		}
 		return err
@@ -137,7 +141,7 @@ func (af *ApiFaker) setHandlers(prefix string) {
 						sort.Sort(models)
 						log.Println("[models]: ", models)
 						ctx.JSON(http.StatusOK, models.ToSlice())
-					} else if id, err := strconv.Atoi(idStr); err == nil {
+					} else if id, err := strconv.ParseFloat(idStr, 64); err == nil {
 						// GET /collection/:id
 						if li, ok := model.Get(id); ok {
 							ctx.JSON(http.StatusOK, li.ToMap())
@@ -168,7 +172,7 @@ func (af *ApiFaker) setHandlers(prefix string) {
 			case PUT:
 				af.PUT(path, func(ctx *gin.Context) {
 					// check if param "id" is int
-					id, err := strconv.Atoi(ctx.Param("id"))
+					id, err := strconv.ParseFloat(ctx.Param("id"), 64)
 					if err != nil {
 						ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
 						return
@@ -181,7 +185,7 @@ func (af *ApiFaker) setHandlers(prefix string) {
 			case PATCH:
 				af.PATCH(path, func(ctx *gin.Context) {
 					// check if param "id" is int
-					id, err := strconv.Atoi(ctx.Param("id"))
+					id, err := strconv.ParseFloat(ctx.Param("id"), 64)
 					if err != nil {
 						ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
 						return
@@ -194,7 +198,7 @@ func (af *ApiFaker) setHandlers(prefix string) {
 			case DELETE:
 				af.DELETE(path, func(ctx *gin.Context) {
 					// check if id is int
-					id, err := strconv.Atoi(ctx.Param("id"))
+					id, err := strconv.ParseFloat(ctx.Param("id"), 64)
 					if err != nil {
 						ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
 						return

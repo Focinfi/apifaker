@@ -29,7 +29,7 @@ func TestNewWithApiDir(t *testing.T) {
 	if faker, err := NewWithApiDir(testDir); err != nil {
 		t.Error(err)
 	} else {
-		t.Logf("%#v", faker.Routers[0])
+		t.Logf("%#v", faker.Routers["users"])
 	}
 }
 
@@ -63,8 +63,7 @@ func TestSetHandlers(t *testing.T) {
 	} else {
 		t.Errorf("can not set Post handlers, response body is: %s", response.Body.String())
 	}
-	AssertEqual(t, faker.Routers[0].Model.Set.Has(gset.T(4)), true)
-	t.Logf("[Slice] %#v ", faker.Routers[0].Model.Set.ToSlice())
+	AssertEqual(t, faker.Routers["users"].Model.Set.Has(gset.T(float64(4))), true)
 
 	// 	with invalid params
 	response, _ = httpmock.POSTForm("/users", invalidUserParam)
@@ -113,7 +112,7 @@ func TestSetHandlers(t *testing.T) {
 	// DELETE /users/:id
 	response = httpmock.DELETE("/users/4", nil)
 	AssertEqual(t, response.Code, http.StatusOK)
-	AssertEqual(t, faker.Routers[0].Model.Has(4), false)
+	AssertEqual(t, faker.Routers["users"].Model.Has(4), false)
 }
 
 func TestMountTo(t *testing.T) {

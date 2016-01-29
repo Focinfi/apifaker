@@ -26,15 +26,16 @@ func TestCheckModelColumns(t *testing.T) {
 
 	// has wrong column
 	model, _ = NewModelWithPath(testDir + "/users.json")
-	model.Seeds[0] = map[string]interface{}{"foo1": "bar", "foo2": "bar", "foo3": 1}
+	model.Seeds[0] = map[string]interface{}{"foo0": "bar", "foo1": "bar", "foo2": "bar", "foo3": 1}
 	if err := model.checkSeeds(); err != ColumnNameError {
-		t.Error("Can not check column name")
+		t.Errorf("Can not check column name, err is: %v", err)
 	}
 }
 
 func TestSaveToFile(t *testing.T) {
 	model, _ := NewModelWithPath(testDir + "/users.json")
 	liMap := map[string]interface{}{
+		"id":    float64(4),
 		"name":  "Monica",
 		"phone": "12332132132",
 		"age":   float64(21),

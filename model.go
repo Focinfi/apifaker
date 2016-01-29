@@ -23,8 +23,8 @@ type Model struct {
 	// Set Compose *gset.SetThreadSafe to contains data
 	Set *gset.SetThreadSafe `json:"-"`
 
-	// currentId record the number of times of adding
-	currentId int `json:"-"`
+	// CurrentId record the number of times of adding
+	CurrentId float64 `json:"current_id"`
 
 	// dataChanged record the sign if this Model's Set have been changed
 	dataChanged bool `json:"-"`
@@ -40,20 +40,20 @@ func NewModel() *Model {
 	}
 }
 
-// nextId plus 1 to Model.currentId return return it
-func (model *Model) nextId() int {
-	model.currentId++
-	return model.currentId
+// nextId plus 1 to Model.CurrentId return return it
+func (model *Model) nextId() float64 {
+	model.CurrentId++
+	return model.CurrentId
 }
 
 // Has return if m has LineItem with id param
-func (model *Model) Has(id int) bool {
+func (model *Model) Has(id float64) bool {
 	return model.Set.Has(gset.T(id))
 }
 
 // Get get and return element with id param, also return
 // if it's not nil or a LineItem
-func (model Model) Get(id int) (li LineItem, ok bool) {
+func (model Model) Get(id float64) (li LineItem, ok bool) {
 	var element interface{}
 	if element, ok = model.Set.Get(id); ok {
 		li, ok = element.(LineItem)
@@ -66,10 +66,14 @@ func (model *Model) Add(li LineItem) error {
 	model.Lock()
 	defer model.Unlock()
 
+	// set id
+	if _, ok := li.Get("id"); !ok {
+		li.Set("id", model.nextId())
+	}
+
 	if err := model.checkSeed(li.ToMap()); err != nil {
 		return err
 	} else {
-		li.Set("id", model.nextId())
 		model.Set.Add(li)
 		model.dataChanged = true
 		model.addUniqueValues(li)
@@ -79,15 +83,19 @@ func (model *Model) Add(li LineItem) error {
 }
 
 // Update a LineItem in Model
-func (model *Model) Update(id int, li *LineItem) error {
+func (model *Model) Update(id float64, li *LineItem) error {
 	model.Lock()
 	defer model.Unlock()
+
+	// set id
+	if _, ok := li.Get("id"); !ok {
+		li.Set("id", id)
+	}
 
 	if err := model.checkSeed(li.dataMap); err != nil {
 		return err
 	} else {
 		if model.Set.Has(gset.T(id)) {
-			li.Set("id", id)
 			model.Set.Add(*li)
 			model.dataChanged = true
 			model.removeUniqueValues(*li)
@@ -101,7 +109,7 @@ func (model *Model) Update(id int, li *LineItem) error {
 }
 
 // Delete
-func (model *Model) Delete(id int) {
+func (model *Model) Delete(id float64) {
 	model.Lock()
 	defer model.Unlock()
 
@@ -150,7 +158,8 @@ func (model *Model) removeUniqueValues(lis ...LineItem) {
 // UpdateWithAttrsInGinContext find a LineItem with id param,
 // update it with attrs from gin.Contex.PostForm(),
 // returns status in net/http package and object for response
-func (model *Model) UpdateWithAttrsInGinContext(id int, ctx *gin.Context) (int, interface{}) {
+func (model *Model) UpdateWithAttrsInGinContext(id float64, ctx *gin.Context) (int, interface{}) {
+	fmt.Println("[Model]:", model.Set.ToSlice())
 	// check if element does exsit
 	li, ok := model.Get(id)
 	if !ok {
@@ -174,7 +183,7 @@ func (model *Model) UpdateWithAttrsInGinContext(id int, ctx *gin.Context) (int, 
 // allocate a new LineItem with attrs from gin.Context.PostForm(),
 // replace this LineItem with the new one,
 // returns status in net/http package, and object for response
-func (model *Model) UpdateWithAllAttrsInGinContex(id int, ctx *gin.Context) (int, interface{}) {
+func (model *Model) UpdateWithAllAttrsInGinContex(id float64, ctx *gin.Context) (int, interface{}) {
 	// check if element does exsit
 	_, ok := model.Get(id)
 	if !ok {
@@ -201,6 +210,10 @@ func (model *Model) UpdateWithAllAttrsInGinContex(id int, ctx *gin.Context) (int
 
 // checkColumnsMeta
 func (model *Model) checkColumnsMeta() error {
+	if len(model.Columns) < 1 || model.Columns[0].Name != "id" {
+		return fmt.Errorf("The first colmun must be id")
+	}
+
 	for _, column := range model.Columns {
 		if err := column.CheckMeta(); err != nil {
 			return err
@@ -213,7 +226,6 @@ func (model *Model) checkColumnsMeta() error {
 // checkSeed check specific seed
 func (model *Model) checkSeed(seed map[string]interface{}) error {
 	columns := model.Columns
-	delete(seed, "id")
 
 	if len(seed) != len(columns) {
 		return ColumnCountError
@@ -225,7 +237,9 @@ func (model *Model) checkSeed(seed map[string]interface{}) error {
 			return ColumnNameError
 		} else {
 			// check seedVal
-			return column.CheckValue(seedVal)
+			if err := column.CheckValue(seedVal); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -314,9 +328,9 @@ func NewModelWithPath(path string) (*Model, error) {
 	} else {
 		// use CheckQueue to check columns and seeds
 		err = gtester.NewCheckQueue().Add(func() error {
-			return model.checkSeeds()
-		}).Add(func() error {
 			return model.checkColumnsMeta()
+		}).Add(func() error {
+			return model.checkSeeds()
 		}).Run()
 
 		if err == nil {

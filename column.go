@@ -84,6 +84,8 @@ func (column *Column) CheckValue(seedVal interface{}) error {
 	typeElement, _ := jsonTypes.Get(column.Type)
 	goType := typeElement.(JsonType).GoType()
 	seedType := reflect.TypeOf(seedVal).String()
+
+	// fmt.Println("[Type]:", goType, seedType)
 	if seedType != goType {
 		ColumnTypeError = fmt.Errorf("column[%s] type is wrong, expected %s, current is %s", column.Name, goType, seedType)
 		return ColumnTypeError

@@ -22,6 +22,10 @@ func NewLineItemWithMap(dataMap map[string]interface{}) LineItem {
 func NewLineItemWithGinContext(ctx *gin.Context, r *Model) (LineItem, error) {
 	li := LineItem{make(map[string]interface{})}
 	for _, column := range r.Columns {
+		// skip id
+		if column.Name == "id" {
+			continue
+		}
 		if value := ctx.PostForm(column.Name); value != "" {
 			switch column.Type {
 			case number.Element():
@@ -52,8 +56,8 @@ func NewLineItemWithGinContext(ctx *gin.Context, r *Model) (LineItem, error) {
 // it will panic if got a nil or no-int "id"
 func (li LineItem) Element() interface{} {
 	if id, ok := li.Get("id"); ok {
-		if idInt, ok := id.(int); ok {
-			return idInt
+		if idFloat64, ok := id.(float64); ok {
+			return idFloat64
 		} else {
 			panic(fmt.Sprintf("lineitem: %#v, its is id must be a int", li))
 		}
@@ -106,7 +110,7 @@ func (lis LineItems) Len() int {
 func (lis LineItems) Less(i, j int) bool {
 	firstId, _ := lis[i].Get("id")
 	secondId, _ := lis[j].Get("id")
-	return firstId.(int) < secondId.(int)
+	return firstId.(float64) < secondId.(float64)
 }
 
 // Swap swap two LineItem

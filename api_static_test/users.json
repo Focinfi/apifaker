@@ -2,6 +2,10 @@
     "resource_name": "users",
     "columns": [
         {
+            "name": "id",
+            "type": "number"
+        },
+        {
             "name": "name",
             "type": "string",
             "regexp_pattern": "[A-z]|[0-9]",
@@ -18,18 +22,22 @@
             "type": "number"
         }
     ],
+    "current_id": 3,
     "seeds": [
         {
+            "id": 1,
             "name": "Frank",
             "phone": "13213213213",
             "age": 22
         },
         {
+            "id": 2,
             "name": "Antony",
             "phone": "13213213211",
             "age": 22
         },
         {
+            "id": 3,
             "name": "Foci",
             "phone": "13213213212",
             "age": 22
