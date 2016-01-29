@@ -13,56 +13,65 @@
 //
 // Rules:
 //
-//   1. "resource_name" string, resource name for this api route, you can see it as a table name when using database.
+// 1. `"resource_name"` string(required), resource name for this api route, you can take it as a table name when using database. As a result
 //
-//   2. "columns" array, columuns for resource, support "name", "type", "regexp_pattern", "unique"
-//       1. "name" and "type" are required.
-//       2. "type" supports: "boolean" "number" "string" "array" "object", these types will be used to check every item data.
-//       3. "regexp_pattern" add regular expression for your string-type column, using internal regexp package, you could run go doc regexp/syntax to see all syntax.
-//       4. "unique": set true(default false) to specify this column should be unique.
+// 2. `"columns"` array(required), columuns for resource, support `"id" "name"`, `"type"`, `"regexp_pattern"`, `"unique"`
+//     1. `"id" "name"` and `"type"` are required.
+//     2. `"id"` must be a "number" as the first cloumn.
+//     3. `"type"` supports: `"boolean" "number" "string" "array" "object"`, these types will be used to check every item data.
+//     4. `"regexp_pattern"` add regular expression for your string-type column, using internal `regexp` package, you could run `go doc regexp/syntax` to learn all syntax.
+//     5. `"unique"`: set true(default false) to specify this column should be unique.
 //
-//   3. "seed" array, lineitems for this resource, note that every lineitem of seeds should has columns descriped in "columns" array, otherwise, it will throw an non-nil error.
+// 3. `"current_id"` number(required), record the the most recently item's id.
 //
 // Here is an example for users.json
 //
-//   {
-//       "resource_name": "users",
-//       "columns": [
-//           {
-//               "name": "name",
-//               "type": "string",
-//               "regexp_pattern": "[A-z]|[0-9]",
-//               "unique": true
-//           },
-//           {
-//               "name": "phone",
-//               "type": "string",
-//               "regexp_pattern": "132.*",
-//               "unique": true
-//           },
-//           {
-//               "name": "age",
-//               "type": "number"
-//           }
-//       ],
-//       "seeds": [
-//           {
-//               "name": "Frank",
-//               "phone": "13213213213",
-//               "age": 22
-//           },
-//           {
-//               "name": "Antony",
-//               "phone": "13213213211",
-//               "age": 22
-//           },
-//           {
-//               "name": "Foci",
-//               "phone": "13213213212",
-//               "age": 22
-//           }
-//       ]
-//   }
+// {
+//     "resource_name": "users",
+//     "columns": [
+//         {
+//             "name": "id",
+//             "type": "number"
+//         },
+//         {
+//             "name": "name",
+//             "type": "string",
+//             "regexp_pattern": "[A-z]|[0-9]",
+//             "unique": true
+//         },
+//         {
+//             "name": "phone",
+//             "type": "string",
+//             "regexp_pattern": "132.*",
+//             "unique": true
+//         },
+//         {
+//             "name": "age",
+//             "type": "number"
+//         }
+//     ],
+//     "current_id": 3,
+//     "seeds": [
+//         {
+//             "id": 1,
+//             "name": "Frank",
+//             "phone": "13213213213",
+//             "age": 22
+//         },
+//         {
+//             "id": 2,
+//             "name": "Antony",
+//             "phone": "13213213211",
+//             "age": 22
+//         },
+//         {
+//             "id": 3,
+//             "name": "Foci",
+//             "phone": "13213213212",
+//             "age": 22
+//         }
+//     ]
+// }
 //
 //
 // 3. Creat a apifaker
