@@ -57,7 +57,7 @@ Here is an example for users.json
         {
             "name": "phone",
             "type": "string",
-            "regexp_pattern": "132.*",
+            "regexp_pattern": "^132",
             "unique": true
         },
         {
@@ -145,7 +145,7 @@ And you can use it as a http.Handler to listen and serve on a port:
 http.ListenAndServe("localhost:3000", fakeApi)
 ```
 
-Now almost everthing is done, let's assume that we use the above examples of users.json and books.json for the `fakerApi`, then you have a list of restful apis for users:
+Now almost everthing is done, let's assume that we use the above examples of users.json and books.json for the `fakerApi`, then you have a list of restful apis for users and books:
 
 ```shell
 GET    /users                   
@@ -154,9 +154,23 @@ POST   /users
 PUT    /users/:id               
 PATCH  /users/:id               
 DELETE /users/:id
+
+GET    /books                   
+GET    /books/:id               
+POST   /books                   
+PUT    /books/:id               
+PATCH  /books/:id               
+DELETE /books/:id
 ```
 
-And this apis are really be able to manage the users resource, just like using database.
+And this apis are really be able to manage the users resource, just like using database, what's more, it will validate every request using the rules defined in `"columns"`, in this example, rules are:
+
+0. every request: resource with given id must exist.
+1. name of users and books must be unique and users'name must contain A-Z or 0-9.
+2. phone of users must has prefix "132".
+3. every POST/PATH/PUT request of books: the user with given user_id must exist.
+
+In a word, it acts like a standard restful api server.
 
 #### Data persistence
 
@@ -181,7 +195,7 @@ Also, you can compose other mutex which implemneted `http.Handler` to the fakeAp
   http.ListenAndServe("localhost:3000", fakeApi)
 ```
 
-Then, `/greet` will be available, at the same time, users apis will change to be: 
+Then, `/greet` will be available, at the same time, users and books apis will change to be: 
 
 ```shell
 GET     /fake_api/users                   
@@ -190,8 +204,11 @@ POST    /fake_api/users
 PUT     /fake_api/users/:id               
 PATCH   /fake_api/users/:id               
 DELETE  /fake_api/users/:id
+
+GET     /fake_api/books                   
+GET     /fake_api/books/:id               
+POST    /fake_api/books                   
+PUT     /fake_api/books/:id               
+PATCH   /fake_api/books/:id               
+DELETE  /fake_api/books/:id
 ```
-
-### Todo
-1. Add relationship supports between models, like one2one, one2many.
-
