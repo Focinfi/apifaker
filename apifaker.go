@@ -50,7 +50,7 @@ func NewWithApiDir(dir string) (*ApiFaker, error) {
 		}
 		var router *Router
 		if strings.HasSuffix(path, ".json") {
-			if router, err = NewRouterWithPath(path); err == nil {
+			if router, err = NewRouterWithPath(path, faker); err == nil {
 				if _, ok := faker.Routers[router.Model.Name]; ok {
 					panic(router.Model.Name + " has been existed")
 				} else {
@@ -62,9 +62,18 @@ func NewWithApiDir(dir string) (*ApiFaker, error) {
 	})
 
 	if err == nil {
+		// check relationships after all of jsons set
+		log.Println("[Routers]", faker.Routers["users"].Model.Set.Len())
+		for _, router := range faker.Routers {
+			if err := router.Model.checkSeedsRelationships(); err != nil {
+				return nil, err
+			}
+		}
+
 		faker.setHandlers("")
 		faker.setSaveToFileTimer()
 	}
+
 	return faker, err
 }
 
@@ -139,11 +148,11 @@ func (af *ApiFaker) setHandlers(prefix string) {
 					if idStr == "" {
 						models := model.ToLineItems()
 						sort.Sort(models)
-						log.Println("[models]: ", models)
 						ctx.JSON(http.StatusOK, models.ToSlice())
 					} else if id, err := strconv.ParseFloat(idStr, 64); err == nil {
 						// GET /collection/:id
 						if li, ok := model.Get(id); ok {
+							model.InsertRelativeData(&li)
 							ctx.JSON(http.StatusOK, li.ToMap())
 						} else {
 							log.Println("[GET one]", li)

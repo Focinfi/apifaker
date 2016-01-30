@@ -3,8 +3,10 @@ package apifaker
 import (
 	"fmt"
 	. "github.com/Focinfi/gset"
+	"github.com/jinzhu/inflection"
 	"reflect"
 	"regexp"
+	"strings"
 )
 
 var ColumnCountError = fmt.Errorf("Has wrong count of columns")
@@ -13,6 +15,10 @@ var ColumnTypeError = fmt.Errorf("Column type wrong")
 var ColumnUniqueError = fmt.Errorf("Column already exists")
 
 type JsonType string
+
+func (j JsonType) typeName() interface{} {
+	return j.Element()
+}
 
 func (j JsonType) Element() interface{} {
 	return string(j)
@@ -78,14 +84,39 @@ func (c Column) CheckMeta() error {
 	return nil
 }
 
+func (column *Column) CheckRelationships(seedVal interface{}, model *Model) error {
+	// check foreign key
+	if strings.HasSuffix(column.Name, "_id") {
+		resName := strings.TrimSuffix(column.Name, "_id")
+		resPluralName := inflection.Plural(resName)
+		// fmt.Println("[Column checking]", column.Name, model.router.apiFaker.Routers["users"].Model.Set.Len())
+		if router, ok := model.router.apiFaker.Routers[resPluralName]; !ok {
+			return fmt.Errorf("has no model: %s", resPluralName)
+		} else {
+			var hasSeed bool
+			for _, seed := range router.Model.Seeds {
+				id, ok := seed["id"]
+				if ok && id == seedVal {
+					hasSeed = true
+					break
+				}
+			}
+			if !hasSeed {
+				return fmt.Errorf("has no lineitem[id=%v] of model[%s]", seedVal, resPluralName)
+			}
+		}
+	}
+
+	return nil
+}
+
 // CheckValue check value if valid
-func (column *Column) CheckValue(seedVal interface{}) error {
+func (column *Column) CheckValue(seedVal interface{}, model *Model) error {
 	// check type
 	typeElement, _ := jsonTypes.Get(column.Type)
 	goType := typeElement.(JsonType).GoType()
 	seedType := reflect.TypeOf(seedVal).String()
 
-	// fmt.Println("[Type]:", goType, seedType)
 	if seedType != goType {
 		ColumnTypeError = fmt.Errorf("column[%s] type is wrong, expected %s, current is %s", column.Name, goType, seedType)
 		return ColumnTypeError

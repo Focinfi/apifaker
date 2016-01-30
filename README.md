@@ -19,11 +19,17 @@ No need of database, just create some json file, and write two line codes, then,
 
 Rules:
 
-1. `"resource_name"` string(required), resource name for this api route, you can take it as a table name when using database. As a result
+1. `"resource_name"` string(required), resource name for this api route, you can take it as a table name when using database. `apifaker` assumes that resource name is plural.
+
+1. "`has_many`" array(optional), every element must be a string of one of the other `"resource_name"`, if a resource's has_many is empty:
+    1. The response of `GET /collention/:id` and `GET /collention` will be insert the related resources.
+    2. The `DELETE /collention/:id` will also deleted the related resources.
+
+1. "`has_one`" array(optional), rules are same as the `"has_many`" except every element must be singular and the response of `GET /collention/:id` and `GET /collention` will be only insert the a first-found object.
 
 2. `"columns"` array(required), columuns for resource, support `"id" "name"`, `"type"`, `"regexp_pattern"`, `"unique"`
-    1. `"id" "name"` and `"type"` are required.
-    2. `"id"` must be a "number" as the first cloumn.
+    1. `"id"` must be a "number" as the first cloumn.
+    1. Every colmun must has at lest `"name"` and `"type"`.
     3. `"type"` supports: `"boolean" "number" "string" "array" "object"`, these types will be used to check every item data.
     4. `"regexp_pattern"` add regular expression for your string-type column, using internal `regexp` package, you could run `go doc regexp/syntax` to learn all syntax.
     5. `"unique"`: set true(default false) to specify this column should be unique.
@@ -83,6 +89,49 @@ Here is an example for users.json
 }
 ```
 
+And books.json
+
+```json
+{
+    "resource_name": "books",
+    "columns": [
+        {
+            "name": "id",
+            "type": "number"
+        },
+        {
+            "name": "title",
+            "type": "string",
+            "regexp_pattern": "[A-z]|[0-9]",
+            "unique": true
+        },
+        {
+            "name": "user_id",
+            "type": "number"
+        }
+        
+    ],
+    "current_id": 3,
+    "seeds": [
+        {
+            "id": 1,
+            "title": "The Little Prince",
+            "user_id": 1
+        },
+        {
+            "id": 2,
+            "title": "Life of Pi",
+            "user_id": 2
+        },
+        {
+            "id": 3,
+            "title": "The Alchemist",
+            "user_id": 1
+        }
+    ]
+}
+```
+
 #### Creat a apifaker
 
 ```go
@@ -96,7 +145,7 @@ And you can use it as a http.Handler to listen and serve on a port:
 http.ListenAndServe("localhost:3000", fakeApi)
 ```
 
-Now almost everthing is done, let's assume that we use the above example users.json file for the `fakerApi`, then you have a list of restful apis for users:
+Now almost everthing is done, let's assume that we use the above examples of users.json and books.json for the `fakerApi`, then you have a list of restful apis for users:
 
 ```shell
 GET    /users                   

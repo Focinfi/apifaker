@@ -19,22 +19,22 @@ func NewLineItemWithMap(dataMap map[string]interface{}) LineItem {
 // NewLineItemWithGinContext allocates and return a new LineItem,
 // its keys are from Model.Cloumns, values ara from gin.Contex.PostForm(),
 // error will be not nil if gin.Contex.PostForm() has not value for any key
-func NewLineItemWithGinContext(ctx *gin.Context, r *Model) (LineItem, error) {
+func NewLineItemWithGinContext(ctx *gin.Context, model *Model) (LineItem, error) {
 	li := LineItem{make(map[string]interface{})}
-	for _, column := range r.Columns {
+	for _, column := range model.Columns {
 		// skip id
 		if column.Name == "id" {
 			continue
 		}
 		if value := ctx.PostForm(column.Name); value != "" {
 			switch column.Type {
-			case number.Element():
+			case number.typeName():
 				if numberVal, err := strconv.ParseFloat(value, 64); err != nil {
 					return li, err
 				} else {
 					li.Set(column.Name, numberVal)
 				}
-			case boolean.Element():
+			case boolean.typeName():
 				if booleanVal, err := strconv.ParseBool(value); err != nil {
 					return li, err
 				} else {
@@ -43,6 +43,12 @@ func NewLineItemWithGinContext(ctx *gin.Context, r *Model) (LineItem, error) {
 			default:
 				li.Set(column.Name, value)
 			}
+
+			// check value
+			seedVal, _ := li.Get(column.Name)
+			if err := column.CheckValue(seedVal, model); err != nil {
+				return li, err
+			}
 		} else {
 			ColumnNameError = fmt.Errorf("doesn't has column: %s", column.Name)
 			return li, ColumnNameError
@@ -50,6 +56,11 @@ func NewLineItemWithGinContext(ctx *gin.Context, r *Model) (LineItem, error) {
 	}
 
 	return li, nil
+}
+
+// Id just call Element()
+func (li *LineItem) Id() interface{} {
+	return li.Element()
 }
 
 // Element returns the value of LineItem's dataMap["id"]

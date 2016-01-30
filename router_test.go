@@ -5,8 +5,10 @@ import (
 	"testing"
 )
 
+var testFaker = &ApiFaker{}
+
 func TestNewRouter(t *testing.T) {
-	router, err := NewRouterWithPath(testDir + "/users.json")
+	router, err := NewRouterWithPath(testDir+"/users.json", testFaker)
 	if err != nil {
 		t.Error(err)
 	}

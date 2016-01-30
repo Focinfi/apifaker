@@ -1,5 +1,8 @@
 {
     "resource_name": "users",
+    "has_many": [
+        "books"
+    ],
     "columns": [
         {
             "name": "id",

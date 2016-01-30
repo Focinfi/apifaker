@@ -20,8 +20,33 @@ var invalidUserParam = map[string]interface{}{
 }
 
 var usersFixture = []map[string]interface{}{
-	{"id": 1, "name": "Frank", "phone": "13213213213", "age": float64(22)},
-	{"id": 2, "name": "Antony", "phone": "13213213211", "age": float64(22)},
+	{
+		"id":    1,
+		"name":  "Frank",
+		"phone": "13213213213",
+		"age":   float64(22),
+		"books": []interface{}{
+			map[string]interface{}{
+				"id":      float64(1),
+				"title":   "The Little Prince",
+				"user_id": float64(1),
+			},
+			map[string]interface{}{
+				"id":      float64(3),
+				"title":   "The Alchemist",
+				"user_id": float64(1),
+			},
+		},
+	},
+	{"id": 2, "name": "Antony", "phone": "13213213211", "age": float64(22),
+		"books": []interface{}{
+			map[string]interface{}{
+				"id":      float64(2),
+				"title":   "Life of Pi",
+				"user_id": float64(2),
+			},
+		},
+	},
 	{"id": 3, "name": "Foci", "phone": "13213213212", "age": float64(22)},
 }
 
@@ -29,7 +54,13 @@ func TestNewWithApiDir(t *testing.T) {
 	if faker, err := NewWithApiDir(testDir); err != nil {
 		t.Error(err)
 	} else {
-		t.Logf("%#v", faker.Routers["users"])
+		AssertEqual(t, len(faker.Routers), 2)
+		AssertEqual(t, faker.Routers["users"].Model.Set.Len(), 3)
+		AssertEqual(t, faker.Routers["books"].Model.Set.Len(), 3)
+		userModel := faker.Routers["users"].Model
+		li, _ := userModel.Get(float64(1))
+		userModel.InsertRelativeData(&li)
+		AssertEqual(t, li.Len(), 5)
 	}
 }
 
@@ -110,9 +141,11 @@ func TestSetHandlers(t *testing.T) {
 	AssertEqual(t, response.Code, http.StatusBadRequest)
 
 	// DELETE /users/:id
-	response = httpmock.DELETE("/users/4", nil)
+	response = httpmock.DELETE("/users/1", nil)
 	AssertEqual(t, response.Code, http.StatusOK)
-	AssertEqual(t, faker.Routers["users"].Model.Has(4), false)
+	AssertEqual(t, faker.Routers["users"].Model.Has(3), true)
+	AssertEqual(t, faker.Routers["books"].Model.Set.Len(), 1)
+	AssertEqual(t, faker.Routers["books"].Model.Has(float64(2)), true)
 }
 
 func TestMountTo(t *testing.T) {

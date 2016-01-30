@@ -6,34 +6,74 @@ import (
 	"testing"
 )
 
+var testRouter = &Router{apiFaker: &ApiFaker{}}
+
 func TestNewModelWithPath(t *testing.T) {
-	model, err := NewModelWithPath(testDir + "/users.json")
+	model, err := NewModelWithPath(testDir+"/users.json", testRouter)
 	if err != nil {
 		t.Error(err)
 	}
 
 	AssertEqual(t, model.Name, "users")
-	AssertEqual(t, model.Set.Len(), 3)
+	AssertEqual(t, model.HasMany, []string{"books"})
+}
+
+func TestCheckRelationships(t *testing.T) {
+	model, _ := NewModelWithPath(testDir+"/users.json", testRouter)
+	model.HasMany = append(model.HasMany, model.HasMany...)
+	AssertError(t, model.checkRelationshipsMeta())
 }
 
 func TestCheckModelColumns(t *testing.T) {
 	// has wrong columns count
-	model, _ := NewModelWithPath(testDir + "/users.json")
+	model, _ := NewModelWithPath(testDir+"/users.json", testRouter)
 	model.Seeds[0] = map[string]interface{}{}
 	if err := model.checkSeeds(); err != ColumnCountError {
 		t.Errorf("Can not detect columns count of seed item, err is %v", err)
 	}
 
 	// has wrong column
-	model, _ = NewModelWithPath(testDir + "/users.json")
+	model, _ = NewModelWithPath(testDir+"/users.json", testRouter)
 	model.Seeds[0] = map[string]interface{}{"foo0": "bar", "foo1": "bar", "foo2": "bar", "foo3": 1}
 	if err := model.checkSeeds(); err != ColumnNameError {
 		t.Errorf("Can not check column name, err is: %v", err)
 	}
 }
+func TestCheckColumnsTypes(t *testing.T) {
+	model, _ := NewModelWithPath(testDir+"/users.json", testRouter)
+	model.Columns[0].Type = "unsupportted_type"
+	AssertError(t, model.checkColumnsMeta())
+}
+
+func TestCheckSeed(t *testing.T) {
+	faker, _ := NewWithApiDir(testDir)
+	userModel := faker.Routers["users"].Model
+	bookModel := faker.Routers["books"].Model
+	// type
+	userModel.Seeds[0]["age"] = "22"
+	AssertError(t, userModel.checkSeed(userModel.Seeds[0]))
+
+	// regexp
+	userModel.Seeds[1]["name"] = ",,,"
+	AssertError(t, userModel.checkSeed(userModel.Seeds[1]))
+
+	// uniqueness
+	AssertError(t, userModel.checkSeed(userModel.Seeds[2]))
+
+	// reset after delete
+	firstLi, _ := userModel.Get(0)
+	toDeleteName, _ := firstLi.Get("name")
+	userModel.Delete(0)
+	AssertEqual(t, userModel.Columns[0].CheckUniqueOf(toDeleteName), true)
+
+	// relationship
+	book := map[string]interface{}{"id": float64(4), "title": "Animal Farm", "user_id": float64(100)}
+	AssertError(t, bookModel.checkSeed(book))
+	t.Log(bookModel.checkSeed(book))
+}
 
 func TestSaveToFile(t *testing.T) {
-	model, _ := NewModelWithPath(testDir + "/users.json")
+	model, _ := NewModelWithPath(testDir+"/users.json", testRouter)
 	liMap := map[string]interface{}{
 		"id":    float64(4),
 		"name":  "Monica",
@@ -63,31 +103,4 @@ func TestSaveToFile(t *testing.T) {
 	} else {
 		AssertEqual(t, model.dataChanged, false)
 	}
-}
-
-func TestCheckColumnsTypes(t *testing.T) {
-	model, _ := NewModelWithPath(testDir + "/users.json")
-	model.Columns[0].Type = "unsupportted_type"
-	AssertError(t, model.checkColumnsMeta())
-}
-
-func TestCheckSeed(t *testing.T) {
-	model, _ := NewModelWithPath(testDir + "/users.json")
-	// type
-	model.Seeds[0]["age"] = "22"
-	AssertError(t, model.checkSeed(model.Seeds[0]))
-
-	// regexp
-	model.Seeds[1]["name"] = ",,,"
-	AssertError(t, model.checkSeed(model.Seeds[1]))
-
-	// uniqueness
-	model.Seeds[2]["name"] = model.Seeds[0]["name"]
-	AssertError(t, model.checkSeed(model.Seeds[2]))
-
-	// reset after delete
-	firstLi, _ := model.Get(0)
-	toDeleteName, _ := firstLi.Get("name")
-	model.Delete(0)
-	AssertEqual(t, model.Columns[0].CheckUniqueOf(toDeleteName), true)
 }

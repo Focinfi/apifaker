@@ -1,0 +1,38 @@
+{
+    "resource_name": "books",
+    "columns": [
+        {
+            "name": "id",
+            "type": "number"
+        },
+        {
+            "name": "title",
+            "type": "string",
+            "regexp_pattern": "[A-z]|[0-9]",
+            "unique": true
+        },
+        {
+            "name": "user_id",
+            "type": "number"
+        }
+        
+    ],
+    "current_id": 3,
+    "seeds": [
+        {
+            "id": 1,
+            "title": "The Little Prince",
+            "user_id": 1
+        },
+        {
+            "id": 2,
+            "title": "Life of Pi",
+            "user_id": 2
+        },
+        {
+            "id": 3,
+            "title": "The Alchemist",
+            "user_id": 1
+        }
+    ]
+}

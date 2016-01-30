@@ -44,7 +44,8 @@ type Router struct {
 	Model  *Model
 	Routes []Route
 
-	filePath string `json:"-"`
+	apiFaker *ApiFaker
+	filePath string
 }
 
 func (r *Router) setRestRoutes() {
@@ -75,13 +76,14 @@ func (r *Router) SaveToFile() error {
 }
 
 // NewRouterWithPath allocates and returns a new Router with the givn file path
-func NewRouterWithPath(path string) (*Router, error) {
-	model, err := NewModelWithPath(path)
+func NewRouterWithPath(path string, apiFaker *ApiFaker) (*Router, error) {
+	router := &Router{apiFaker: apiFaker, filePath: path}
+	model, err := NewModelWithPath(path, router)
 	if err != nil {
 		return nil, err
 	}
 
-	router := &Router{Model: model, filePath: path}
+	router.Model = model
 	router.setRestRoutes()
 	return router, err
 }
