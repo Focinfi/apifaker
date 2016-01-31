@@ -174,7 +174,7 @@ func (af *ApiFaker) setHandlers(prefix string) {
 					} else if id, err := strconv.ParseFloat(idStr, 64); err == nil {
 						// GET /collection/:id
 						if li, ok := model.Get(id); ok {
-							model.InsertRelativeData(&li)
+							model.InsertRelatedData(&li)
 							ctx.JSON(http.StatusOK, li.ToMap())
 						} else {
 							log.Println("[GET one]", li)

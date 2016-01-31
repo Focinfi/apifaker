@@ -59,7 +59,7 @@ func TestNewWithApiDir(t *testing.T) {
 		AssertEqual(t, faker.Routers["books"].Model.Set.Len(), 3)
 		userModel := faker.Routers["users"].Model
 		li, _ := userModel.Get(float64(1))
-		userModel.InsertRelativeData(&li)
+		userModel.InsertRelatedData(&li)
 		AssertEqual(t, li.Len(), 5)
 	}
 }
