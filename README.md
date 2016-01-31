@@ -63,7 +63,6 @@ Here is an example for users.json
             "type": "number"
         }
     ],
-    "current_id": 3,
     "seeds": [
         {
             "id": 1,
@@ -109,7 +108,6 @@ And books.json
         }
         
     ],
-    "current_id": 3,
     "seeds": [
         {
             "id": 1,
