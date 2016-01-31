@@ -363,7 +363,9 @@ func (model *Model) checkRelationshipsMeta() error {
 
 // checkColumnsMeta
 func (model *Model) checkColumnsMeta() error {
-	if len(model.Columns) < 1 || model.Columns[0].Name != "id" {
+	if len(model.Columns) < 1 ||
+		model.Columns[0].Name != "id" ||
+		model.Columns[0].Type != number.Name() {
 		return fmt.Errorf("The first colmun must be id")
 	}
 
