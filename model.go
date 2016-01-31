@@ -53,6 +53,11 @@ func (model *Model) nextId() float64 {
 	return model.CurrentId
 }
 
+// Len return the length of Model's Set
+func (model *Model) Len() int {
+	return model.Set.Len()
+}
+
 // Has return if m has LineItem with id param
 func (model *Model) Has(id float64) bool {
 	return model.Set.Has(gset.T(id))
@@ -382,7 +387,10 @@ func (model *Model) checkSeeds() error {
 }
 
 func (model *Model) checkSeedsUniqueness() error {
-	for _, seed := range model.Seeds {
+	for _, column := range model.Columns {
+		if column.Unique && column.uniqueValues.Len() != model.Len() {
+			return fmt.Errorf("column[%s]in model[%s] is has same values", column.Name, model.Name)
+		}
 	}
 
 	return nil

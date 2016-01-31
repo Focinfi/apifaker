@@ -64,9 +64,10 @@ func NewWithApiDir(dir string) (*ApiFaker, error) {
 			return err
 		})
 	}).Add(func() error {
+		// check uniqueness
 		return faker.checkAllRoutersUniqueness()
 	}).Add(func() error {
-		// check relationships after all of jsons set
+		// check relationships
 		return faker.checkAllRoutersRelationships()
 	}).Run()
 
@@ -79,6 +80,11 @@ func NewWithApiDir(dir string) (*ApiFaker, error) {
 }
 
 func (af *ApiFaker) checkAllRoutersUniqueness() error {
+	for _, router := range af.Routers {
+		if err := router.Model.checkSeedsUniqueness(); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
