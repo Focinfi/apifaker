@@ -445,6 +445,12 @@ func (model *Model) checkSeeds() error {
 
 // checkSeedsUniqueness check uniqueness for initialization for ApiFaker
 func (model *Model) checkSeedsUniqueness() error {
+	// check id
+	if model.Len() != len(model.Seeds) {
+		return fmt.Errorf("model[%s] has same id", model.Name)
+	}
+
+	// check other unique columns
 	for _, column := range model.Columns {
 		if column.Unique && column.uniqueValues.Len() != model.Len() {
 			return fmt.Errorf("column[%s]in model[%s] is has same values", column.Name, model.Name)
