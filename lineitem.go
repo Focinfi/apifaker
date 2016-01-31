@@ -28,13 +28,13 @@ func NewLineItemWithGinContext(ctx *gin.Context, model *Model) (LineItem, error)
 		}
 		if value := ctx.PostForm(column.Name); value != "" {
 			switch column.Type {
-			case number.typeName():
+			case number.Name():
 				if numberVal, err := strconv.ParseFloat(value, 64); err != nil {
 					return li, err
 				} else {
 					li.Set(column.Name, numberVal)
 				}
-			case boolean.typeName():
+			case boolean.Name():
 				if booleanVal, err := strconv.ParseBool(value); err != nil {
 					return li, err
 				} else {

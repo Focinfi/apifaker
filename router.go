@@ -14,24 +14,6 @@ const (
 	DELETE
 )
 
-func (r RestMethod) String() string {
-	switch r {
-	case GET:
-		return "GET"
-	case POST:
-		return "POST"
-	case PUT:
-		return "PUT"
-	case PATCH:
-		return "PATCH"
-	case DELETE:
-		return "DELETE"
-	default:
-		return ""
-	}
-	return ""
-}
-
 type Route struct {
 	// Method request method only support GET, POST, PUT, PATCH, DELETE
 	Method RestMethod

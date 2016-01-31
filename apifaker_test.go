@@ -125,6 +125,7 @@ func TestSetHandlers(t *testing.T) {
 	userEditedAttrPut := map[string]interface{}{"name": "Vincent", "phone": "13213213217", "age": float64(23)}
 	response, _ = httpmock.PUT("/users/4", userEditedAttrPut)
 	AssertEqual(t, response.Code, http.StatusOK)
+	t.Logf("[PUT]%s", response.Body)
 
 	respJSON = response.JSON()
 	if resMap, ok := respJSON.(map[string]interface{}); ok {

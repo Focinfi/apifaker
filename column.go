@@ -16,11 +16,16 @@ var ColumnUniqueError = fmt.Errorf("Column already exists")
 
 type JsonType string
 
-func (j JsonType) typeName() interface{} {
-	return j.Element()
-}
+const (
+	boolean JsonType = "boolean"
+	number  JsonType = "number"
+	str     JsonType = "string"
+	array   JsonType = "array"
+	object  JsonType = "object"
+)
 
-func (j JsonType) Element() interface{} {
+// Name return JsonType string itself
+func (j JsonType) Name() interface{} {
 	return string(j)
 }
 
@@ -40,16 +45,8 @@ func (j JsonType) GoType() string {
 	return "nil"
 }
 
-const (
-	boolean JsonType = "boolean"
-	number  JsonType = "number"
-	str     JsonType = "string"
-	array   JsonType = "array"
-	object  JsonType = "object"
-)
-
 // jsonTypes contains a list a supportted supportted
-var jsonTypes = NewSet(boolean, number, str, array, object)
+var jsonTypes = NewSetSimple(boolean, number, str, array, object)
 
 type Column struct {
 	Name          string         `json:"name"`
@@ -70,8 +67,8 @@ func (c Column) CheckMeta() error {
 	}
 
 	// type must be in jsonTypes
-	if !jsonTypes.Has(T(c.Type)) {
-		return fmt.Errorf("don't support type: %s, supportted types %#v", jsonTypes.ToSlice())
+	if !jsonTypes.Has(JsonType(c.Type)) {
+		return fmt.Errorf("don't support type: %s, supportted types %#v", c.Type, jsonTypes.ToSlice())
 	}
 
 	// check regexp format
@@ -84,12 +81,12 @@ func (c Column) CheckMeta() error {
 	return nil
 }
 
+// CheckRelationships
 func (column *Column) CheckRelationships(seedVal interface{}, model *Model) error {
 	// check foreign key
 	if strings.HasSuffix(column.Name, "_id") {
 		resName := strings.TrimSuffix(column.Name, "_id")
 		resPluralName := inflection.Plural(resName)
-		// fmt.Println("[Column checking]", column.Name, model.router.apiFaker.Routers["users"].Model.Set.Len())
 		if router, ok := model.router.apiFaker.Routers[resPluralName]; !ok {
 			return fmt.Errorf("has no model: %s", resPluralName)
 		} else {
@@ -110,20 +107,19 @@ func (column *Column) CheckRelationships(seedVal interface{}, model *Model) erro
 	return nil
 }
 
-// CheckValue check value if valid
+// CheckValue
 func (column *Column) CheckValue(seedVal interface{}, model *Model) error {
 	// check type
-	typeElement, _ := jsonTypes.Get(column.Type)
-	goType := typeElement.(JsonType).GoType()
+	goType := JsonType(column.Type).GoType()
 	seedType := reflect.TypeOf(seedVal).String()
 
 	if seedType != goType {
-		ColumnTypeError = fmt.Errorf("column[%s] type is wrong, expected %s, current is %s", column.Name, goType, seedType)
+		ColumnTypeError = fmt.Errorf("column[%s] type is wrong, expected %s, current is %s", column.Name, goType, 2)
 		return ColumnTypeError
 	}
 
 	// check regexp pattern matching
-	if column.RegexpPattern != "" && column.Type == str.Element() {
+	if column.RegexpPattern != "" && column.Type == str.Name() {
 		matched, err := regexp.Match(column.RegexpPattern, []byte(seedVal.(string)))
 		if err != nil {
 			return fmt.Errorf("column regexp %s has format error", column.RegexpPattern)

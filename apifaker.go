@@ -1,6 +1,7 @@
 package apifaker
 
 import (
+	"github.com/Focinfi/gtester"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"os"
@@ -41,40 +42,55 @@ func NewWithApiDir(dir string) (*ApiFaker, error) {
 		Routers: map[string]*Router{},
 	}
 
-	err := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
-		if f == nil {
-			return err
-		}
-		if f.IsDir() {
-			return nil
-		}
-		var router *Router
-		if strings.HasSuffix(path, ".json") {
-			if router, err = NewRouterWithPath(path, faker); err == nil {
-				if _, ok := faker.Routers[router.Model.Name]; ok {
-					panic(router.Model.Name + " has been existed")
-				} else {
-					faker.Routers[router.Model.Name] = router
+	err := gtester.NewCheckQueue().Add(func() error {
+		// traverse dir
+		return filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
+			if f == nil {
+				return err
+			}
+			if f.IsDir() {
+				return nil
+			}
+			var router *Router
+			if strings.HasSuffix(path, ".json") {
+				if router, err = NewRouterWithPath(path, faker); err == nil {
+					if _, ok := faker.Routers[router.Model.Name]; ok {
+						panic(router.Model.Name + " has been existed")
+					} else {
+						faker.Routers[router.Model.Name] = router
+					}
 				}
 			}
-		}
-		return err
-	})
+			return err
+		})
+	}).Add(func() error {
+		return faker.checkAllRoutersUniqueness()
+	}).Add(func() error {
+		// check relationships after all of jsons set
+		return faker.checkAllRoutersRelationships()
+	}).Run()
 
 	if err == nil {
-		// check relationships after all of jsons set
-		log.Println("[Routers]", faker.Routers["users"].Model.Set.Len())
-		for _, router := range faker.Routers {
-			if err := router.Model.checkSeedsRelationships(); err != nil {
-				return nil, err
-			}
-		}
-
 		faker.setHandlers("")
 		faker.setSaveToFileTimer()
 	}
 
 	return faker, err
+}
+
+func (af *ApiFaker) checkAllRoutersUniqueness() error {
+	return nil
+}
+
+// checkAllRoutersRelationships
+func (af *ApiFaker) checkAllRoutersRelationships() error {
+	for _, router := range af.Routers {
+		if err := router.Model.checkSeedsRelationships(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // ServeHTTP serve the req and write response to rw.

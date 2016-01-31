@@ -34,7 +34,7 @@ type Model struct {
 	// dataChanged record the sign if this Model's Set have been changed
 	dataChanged bool `json:"-"`
 	sync.Mutex  `json:"-"`
-	router      *Router
+	router      *Router `json:"-"`
 }
 
 // NewModel allocates and returns a new Model
@@ -376,6 +376,13 @@ func (model *Model) checkSeeds() error {
 		if err := model.checkSeed(seed); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (model *Model) checkSeedsUniqueness() error {
+	for _, seed := range model.Seeds {
 	}
 
 	return nil
