@@ -28,8 +28,8 @@ type Model struct {
 	// Set Compose *gset.SetThreadSafe to contains data
 	Set *gset.SetThreadSafe `json:"-"`
 
-	// CurrentId record the number of times of adding
-	CurrentId float64 `json:"current_id"`
+	// currentId record the number of times of adding
+	currentId float64 `json:"-"`
 
 	// dataChanged record the sign if this Model's Set have been changed
 	dataChanged bool `json:"-"`
@@ -70,7 +70,6 @@ func NewModelWithPath(path string, router *Router) (*Model, error) {
 		// use CheckQueue to check columns and seeds
 		err = gtester.NewCheckQueue().Add(func() error {
 			return model.checkRelationshipsMeta()
-			return nil
 		}).Add(func() error {
 			return model.checkColumnsMeta()
 		}).Add(func() error {
@@ -86,10 +85,17 @@ func NewModelWithPath(path string, router *Router) (*Model, error) {
 	return model, err
 }
 
-// nextId plus 1 to Model.CurrentId return return it
+// updateId update currentId if the given id is bigger
+func (model *Model) updateId(id float64) {
+	if id > model.currentId {
+		model.currentId = id
+	}
+}
+
+// nextId plus 1 to Model.currentId return return it
 func (model *Model) nextId() float64 {
-	model.CurrentId++
-	return model.CurrentId
+	model.currentId++
+	return model.currentId
 }
 
 // Len return the length of Model's Set
@@ -467,6 +473,11 @@ func (model *Model) setItems() {
 	}
 	for _, seed := range model.Seeds {
 		li := NewLineItemWithMap(seed)
+		if id, ok := li.Get("id"); ok {
+			if idFloat, ok := id.(float64); ok {
+				model.updateId(idFloat)
+			}
+		}
 		model.Set.Add(li)
 		model.addUniqueValues(li)
 	}

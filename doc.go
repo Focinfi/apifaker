@@ -22,16 +22,15 @@
 //
 // 1. "`has_one`" array(optional), rules are same as the `"has_many`" except every element must be singular and the response of `GET /collention/:id` and `GET /collention` will be only insert the a first-found object.
 //
-// 2. `"columns"` array(required), columuns for resource, support `"id" "name"`, `"type"`, `"regexp_pattern"`, `"unique"`
+// 1. `"columns"` array(required), columuns for resource, support `"id" "name"`, `"type"`, `"regexp_pattern"`, `"unique"`
 //     1. `"id"` must be a "number" as the first cloumn.
 //     1. Every colmun must has at lest `"name"` and `"type"`.
 //     3. `"type"` supports: `"boolean" "number" "string" "array" "object"`, these types will be used to check every item data.
 //     4. `"regexp_pattern"` add regular expression for your string-type column, using internal `regexp` package, you could run `go doc regexp/syntax` to learn all syntax.
 //     5. `"unique"`: set true(default false) to specify this column should be unique.
 //
-// 3. `"current_id"` number(required), record the the most recently item's id.
 //
-// 4. `"seed"` array(optional), lineitems for this resource, note that every lineitem of seeds should has columns descriped in `"columns"` array, otherwise, it will throw an non-nil error.
+// 1. `"seed"` array(optional), lineitems for this resource, note that every lineitem of seeds should has columns descriped in `"columns"` array, otherwise, it will throw an non-nil error.
 //
 // Here is an example for users.json
 //
