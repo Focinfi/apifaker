@@ -139,7 +139,7 @@ func (column *Column) CheckValue(seedVal interface{}, model *Model) error {
 
 // CheckUniqueOf check if the given value exists
 func (c *Column) CheckUniqueOf(value interface{}) bool {
-	if !c.Unique {
+	if !c.Unique || c.Name == "id" {
 		return true
 	}
 
