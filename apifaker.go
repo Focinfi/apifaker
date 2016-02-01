@@ -162,23 +162,16 @@ func (af *ApiFaker) setHandlers() {
 			switch method {
 			case GET:
 				af.GET(path, func(ctx *gin.Context) {
-					idStr := ctx.Param("id")
-					// GET /collection
-					if idStr == "" {
+					if id, ok := ctx.Get("idFloat64"); ok {
+						// GET /collection/:id
+						li, _ := model.Get(id.(float64))
+						model.InsertRelatedData(&li)
+						ctx.JSON(http.StatusOK, li.ToMap())
+					} else {
+						// GET /collection
 						models := model.ToLineItems()
 						sort.Sort(models)
 						ctx.JSON(http.StatusOK, models.ToSlice())
-					} else if id, err := strconv.ParseFloat(idStr, 64); err == nil {
-						// GET /collection/:id
-						if li, ok := model.Get(id); ok {
-							model.InsertRelatedData(&li)
-							ctx.JSON(http.StatusOK, li.ToMap())
-						} else {
-							ctx.JSON(http.StatusNotFound, nil)
-						}
-					} else {
-						// GET /collection/xxx
-						ctx.JSON(http.StatusBadRequest, nil)
 					}
 				})
 			case POST:
