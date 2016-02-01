@@ -16,7 +16,7 @@ var userParam = map[string]interface{}{
 }
 
 var invalidUserParam = map[string]interface{}{
-	"name": ",,,", "phone": "13013213214", "age": "22",
+	"name": "N", "phone": "13013213214", "age": "22x",
 }
 
 var usersFixture = []map[string]interface{}{
@@ -102,9 +102,10 @@ func TestSetHandlers(t *testing.T) {
 
 	// PATCH /users/:id
 	// 	with valid params
-	userEditedAttrPatch := map[string]interface{}{"name": "Vincent"}
+	userEditedAttrPatch := map[string]interface{}{"name": "Vincent", "age": "22"}
 	response, _ = httpmock.PATCH("/users/4", userEditedAttrPatch)
 	AssertEqual(t, response.Code, http.StatusOK)
+	t.Logf("[PATCH]%s", response.Body)
 
 	respJSON = response.JSON()
 	if resMap, ok := respJSON.(map[string]interface{}); ok {
@@ -125,7 +126,6 @@ func TestSetHandlers(t *testing.T) {
 	userEditedAttrPut := map[string]interface{}{"name": "Vincent", "phone": "13213213217", "age": float64(23)}
 	response, _ = httpmock.PUT("/users/4", userEditedAttrPut)
 	AssertEqual(t, response.Code, http.StatusOK)
-	t.Logf("[PUT]%s", response.Body)
 
 	respJSON = response.JSON()
 	if resMap, ok := respJSON.(map[string]interface{}); ok {

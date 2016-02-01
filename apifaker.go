@@ -3,6 +3,7 @@ package apifaker
 import (
 	"github.com/Focinfi/gtester"
 	"github.com/gin-gonic/gin"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -10,8 +11,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"log"
 )
 
 type ApiFaker struct {
@@ -25,8 +24,8 @@ type ApiFaker struct {
 	// Routers a array of pointer for Router
 	Routers map[string]*Router
 
-	// TrueMux external mux for the real api
-	TrueMux http.Handler
+	// ExtMux external mux for the real api
+	ExtMux http.Handler
 
 	// Prefix the prefix of fake apis
 	Prefix string
@@ -37,7 +36,6 @@ type ApiFaker struct {
 // there are some errors of manipulating ApiDir or json.Unmarshal
 func NewWithApiDir(dir string) (*ApiFaker, error) {
 	faker := &ApiFaker{
-		Engine:  gin.Default(),
 		ApiDir:  dir,
 		Routers: map[string]*Router{},
 	}
@@ -48,80 +46,76 @@ func NewWithApiDir(dir string) (*ApiFaker, error) {
 			if f == nil {
 				return err
 			}
-			if f.IsDir() {
+			if f.IsDir() || !strings.HasSuffix(path, ".json") {
 				return nil
 			}
-			var router *Router
-			if strings.HasSuffix(path, ".json") {
-				if router, err = NewRouterWithPath(path, faker); err == nil {
-					if _, ok := faker.Routers[router.Model.Name]; ok {
-						panic(router.Model.Name + " has been existed")
-					} else {
-						faker.Routers[router.Model.Name] = router
-					}
+
+			if router, err := NewRouterWithPath(path, faker); err != nil {
+				return err
+			} else {
+				if _, ok := faker.Routers[router.Model.Name]; ok {
+					panic(router.Model.Name + " has been existed")
+				} else {
+					faker.Routers[router.Model.Name] = router
 				}
 			}
-			return err
+			return nil
 		})
 	}).Add(func() error {
-		// check uniqueness
-		return faker.checkAllRoutersUniqueness()
+		return faker.CheckUniqueness()
 	}).Add(func() error {
-		// check relationships
-		return faker.checkAllRoutersRelationships()
+		return faker.CheckRelationships()
 	}).Run()
 
 	if err == nil {
-		faker.setHandlers("")
+		faker.setHandlers()
 		faker.setSaveToFileTimer()
 	}
 
 	return faker, err
 }
 
-func (af *ApiFaker) checkAllRoutersUniqueness() error {
+// CheckUniqueness
+func (af *ApiFaker) CheckUniqueness() error {
 	for _, router := range af.Routers {
-		if err := router.Model.checkSeedsUniqueness(); err != nil {
+		if err := router.Model.CheckUniqueness(); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// checkAllRoutersRelationships
-func (af *ApiFaker) checkAllRoutersRelationships() error {
+// CheckRelationships
+func (af *ApiFaker) CheckRelationships() error {
 	for _, router := range af.Routers {
-		if err := router.Model.checkSeedsRelationships(); err != nil {
+		if err := router.Model.CheckRelationships(); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
 // ServeHTTP serve the req and write response to rw.
 // It will use gin.Engine when req.URL.Path hasing prefix of af.Prefix
-// otherwise it will call af.TrueMux.ServeHTTP()
+// otherwise it will call af.ExtMux.ServeHTTP()
 func (af *ApiFaker) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	path := req.URL.Path
-	if af.Prefix == "" || strings.HasPrefix(path, af.Prefix+"/") {
+	if af.Prefix == "" || strings.HasPrefix(path, af.Prefix+"/") || af.ExtMux == nil {
 		af.Engine.ServeHTTP(rw, req)
 	} else {
-		if af.TrueMux != nil {
-			af.TrueMux.ServeHTTP(rw, req)
-		}
+		af.ExtMux.ServeHTTP(rw, req)
 	}
 }
 
-// MountTo assign path as af's Prefix and assign handler as af's TrueMux.
+// MountTo assign path as af's Prefix and assign handler as af's ExtMux.
 // At same time set hte handlers for af
 func (af *ApiFaker) MountTo(path string, handler http.Handler) {
 	af.Prefix = path
-	af.Engine = gin.Default()
-	af.setHandlers(path)
-	af.TrueMux = handler
+	af.setHandlers()
+	af.ExtMux = handler
 }
 
+// SaveToFile
 func (af *ApiFaker) SaveToFile() {
 	for _, router := range af.Routers {
 		router.SaveToFile()
@@ -148,7 +142,7 @@ func (af *ApiFaker) setSaveToFileTimer() {
 
 // setHandlers set all handlers into af.Engine.
 // It will panic when there are has repeat combination of route.Method and route.Path
-func (af *ApiFaker) setHandlers(prefix string) {
+func (af *ApiFaker) setHandlers() {
 	// if any panic exsits, Save data to json
 	defer func() {
 		if err := recover(); err != nil {
@@ -157,11 +151,14 @@ func (af *ApiFaker) setHandlers(prefix string) {
 		}
 	}()
 
+	// reset Engine
+	af.Engine = NewGinEngineWithFaker(af)
+
 	for _, router := range af.Routers {
 		for _, route := range router.Routes {
-			method := route.Method
 			model := router.Model
-			path := prefix + route.Path
+			method := route.Method
+			path := af.Prefix + route.Path
 			switch method {
 			case GET:
 				af.GET(path, func(ctx *gin.Context) {
@@ -177,7 +174,6 @@ func (af *ApiFaker) setHandlers(prefix string) {
 							model.InsertRelatedData(&li)
 							ctx.JSON(http.StatusOK, li.ToMap())
 						} else {
-							log.Println("[GET one]", li)
 							ctx.JSON(http.StatusNotFound, nil)
 						}
 					} else {
@@ -202,44 +198,79 @@ func (af *ApiFaker) setHandlers(prefix string) {
 				})
 			case PUT:
 				af.PUT(path, func(ctx *gin.Context) {
-					// check if param "id" is int
-					id, err := strconv.ParseFloat(ctx.Param("id"), 64)
+					// allocate a new item
+					newLi, err := NewLineItemWithGinContext(ctx, model)
+
 					if err != nil {
-						ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
+						ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 						return
 					}
 
-					// update with attrs
-					code, resp := model.UpdateWithAllAttrsInGinContex(id, ctx)
-					ctx.JSON(code, resp)
+					// update
+					id, _ := ctx.Get("idFloat64")
+					if err := model.Update(id.(float64), &newLi); err != nil {
+						ctx.JSON(http.StatusBadRequest, map[string]string{"message": err.Error()})
+					} else {
+						ctx.JSON(http.StatusOK, newLi.ToMap())
+					}
 				})
 			case PATCH:
 				af.PATCH(path, func(ctx *gin.Context) {
-					// check if param "id" is int
-					id, err := strconv.ParseFloat(ctx.Param("id"), 64)
-					if err != nil {
-						ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
-						return
-					}
-
 					// update with attrs, got error if attrs is not complete
-					code, resp := model.UpdateWithAttrsInGinContext(id, ctx)
-					ctx.JSON(code, resp)
+					id, _ := ctx.Get("idFloat64")
+					if li, err := model.UpdateWithAttrs(id.(float64), ctx); err != nil {
+						ctx.JSON(http.StatusBadRequest, map[string]string{"message": err.Error()})
+					} else {
+						ctx.JSON(http.StatusOK, li.ToMap())
+					}
 				})
 			case DELETE:
 				af.DELETE(path, func(ctx *gin.Context) {
-					// check if id is int
-					id, err := strconv.ParseFloat(ctx.Param("id"), 64)
-					if err != nil {
-						ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
-						return
-					}
-
 					// delete
-					model.Delete(id)
+					id, _ := ctx.Get("idFloat64")
+					model.Delete(id.(float64))
 					ctx.JSON(http.StatusOK, nil)
 				})
 			}
 		}
 	}
+}
+
+func NewGinEngineWithFaker(faker *ApiFaker) *gin.Engine {
+	engine := gin.Default()
+	// check id
+	engine.Use(func(ctx *gin.Context) {
+		// check if param "id" is int
+		idStr := ctx.Param("id")
+		if idStr == "" {
+			ctx.Next()
+			return
+		}
+
+		id, err := strconv.ParseFloat(idStr, 64)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+			return
+		}
+
+		path := strings.TrimSuffix(ctx.Request.URL.Path, "/")
+		pathPieces := strings.Split(path, "/")
+		resourceName := pathPieces[len(pathPieces)-2]
+
+		// check if element does exsit
+		if router, ok := faker.Routers[resourceName]; ok {
+			if _, ok := router.Model.Get(id); ok {
+				ctx.Set("idFloat64", id)
+				ctx.Next()
+			} else {
+				ctx.JSON(http.StatusNotFound, nil)
+				return
+			}
+		} else {
+			ctx.JSON(http.StatusNotFound, nil)
+			return
+		}
+	})
+
+	return engine
 }

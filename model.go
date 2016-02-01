@@ -8,7 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/inflection"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"sort"
 	"sync"
@@ -69,7 +68,7 @@ func NewModelWithPath(path string, router *Router) (*Model, error) {
 	} else {
 		// use CheckQueue to check columns and seeds
 		err = gtester.NewCheckQueue().Add(func() error {
-			return model.checkRelationshipsMeta()
+			return model.CheckRelationshipsMeta()
 		}).Add(func() error {
 			return model.checkColumnsMeta()
 		}).Add(func() error {
@@ -141,6 +140,10 @@ func (model *Model) Add(li LineItem) error {
 
 // Update a LineItem in Model
 func (model *Model) Update(id float64, li *LineItem) error {
+	if !model.Has(id) {
+		return fmt.Errorf("model[id:%d] does not exsit", id)
+	}
+
 	model.Lock()
 	defer model.Unlock()
 
@@ -152,14 +155,10 @@ func (model *Model) Update(id float64, li *LineItem) error {
 	if err := model.checkSeed(li.dataMap); err != nil {
 		return err
 	} else {
-		if model.Set.Has(gset.T(id)) {
-			model.Set.Add(*li)
-			model.dataChanged = true
-			model.removeUniqueValues(*li)
-			model.addUniqueValues(*li)
-		} else {
-			return fmt.Errorf("model[id:%d] does not exsit", id)
-		}
+		model.Set.Add(*li)
+		model.dataChanged = true
+		model.removeUniqueValues(*li)
+		model.addUniqueValues(*li)
 	}
 
 	return nil
@@ -185,53 +184,33 @@ func (model *Model) Delete(id float64) {
 // UpdateWithAttrsInGinContext find a LineItem with id param,
 // update it with attrs from gin.Contex.PostForm(),
 // returns status in net/http package and object for response
-func (model *Model) UpdateWithAttrsInGinContext(id float64, ctx *gin.Context) (int, interface{}) {
+func (model *Model) UpdateWithAttrs(id float64, ctx *gin.Context) (LineItem, error) {
 	// check if element does exsit
 	li, ok := model.Get(id)
 	if !ok {
-		return http.StatusNotFound, nil
+		return li, fmt.Errorf("model[id:%d] does not exsit", id)
 	}
 
 	// update model
 	for _, column := range model.Columns {
-		if value := ctx.PostForm(column.Name); value != "" {
-			if err := column.CheckValue(value, model); err != nil {
-				return http.StatusBadRequest, map[string]interface{}{"message": err.Error()}
-			} else {
-				li.Set(column.Name, value)
-			}
+		value := ctx.PostForm(column.Name)
+
+		if value == "" || column.Name == "id" {
+			continue
+		}
+
+		formatVal, err := FormatValue(column.Type, value)
+		if err == nil {
+			err = column.CheckValue(formatVal, model)
+		}
+
+		if err != nil {
+			return li, err
+		} else {
+			li.Set(column.Name, formatVal)
 		}
 	}
-	return http.StatusOK, li.ToMap()
-}
-
-// UpdateWithAllAttrsInGinContex find a LineItem with id param,
-// allocate a new LineItem with attrs from gin.Context.PostForm(),
-// replace this LineItem with the new one,
-// returns status in net/http package, and object for response
-func (model *Model) UpdateWithAllAttrsInGinContex(id float64, ctx *gin.Context) (int, interface{}) {
-	// check if element does exsit
-	_, ok := model.Get(id)
-	if !ok {
-		return http.StatusNotFound, nil
-	}
-
-	// update this li with a new item
-	var newItem LineItem
-	err := gtester.NewCheckQueue().Add(func() error {
-		var err error
-		newItem, err = NewLineItemWithGinContext(ctx, model)
-		return err
-	}).Add(func() error {
-		return model.Update(id, &newItem)
-	}).Run()
-
-	// check err
-	if err != nil {
-		return http.StatusBadRequest, map[string]string{"message": err.Error()}
-	} else {
-		return http.StatusOK, newItem.ToMap()
-	}
+	return li, nil
 }
 
 //------End Model CURD------//
@@ -341,8 +320,8 @@ func (model *Model) DeleteRelatedLis(id float64) {
 //------End LineItem Related Data------//
 
 //------Check------//
-// checkRelationshipsMeta
-func (model *Model) checkRelationshipsMeta() error {
+// CheckRelationshipsMeta
+func (model *Model) CheckRelationshipsMeta() error {
 	set := gset.NewSetSimple()
 	for _, resName := range model.HasMany {
 		if set.Has(resName) {
@@ -378,8 +357,8 @@ func (model *Model) checkColumnsMeta() error {
 	return nil
 }
 
-// checkRelationships
-func (model *Model) checkRelationships(seed map[string]interface{}) error {
+// CheckRelationship
+func (model *Model) CheckRelationship(seed map[string]interface{}) error {
 	for _, column := range model.Columns {
 		if err := column.CheckRelationships(seed[column.Name], model); err != nil {
 			return err
@@ -422,12 +401,12 @@ func (model *Model) checkSeedsBasic() error {
 	return nil
 }
 
-// checkSeed checkSeedBasic and checkRelationships
+// checkSeed checkSeedBasic and CheckRelationships
 func (model *Model) checkSeed(seed map[string]interface{}) error {
 	return gtester.NewCheckQueue().Add(func() error {
 		return model.checkSeedBasic(seed)
 	}).Add(func() error {
-		return model.checkRelationships(seed)
+		return model.CheckRelationship(seed)
 	}).Run()
 }
 
@@ -443,8 +422,8 @@ func (model *Model) checkSeeds() error {
 	return nil
 }
 
-// checkSeedsUniqueness check uniqueness for initialization for ApiFaker
-func (model *Model) checkSeedsUniqueness() error {
+// CheckUniqueness check uniqueness for initialization for ApiFaker
+func (model *Model) CheckUniqueness() error {
 	// check id
 	if model.Len() != len(model.Seeds) {
 		return fmt.Errorf("model[%s] has same id", model.Name)
@@ -460,10 +439,10 @@ func (model *Model) checkSeedsUniqueness() error {
 	return nil
 }
 
-// checkSeedsRelationships
-func (model *Model) checkSeedsRelationships() error {
+// CheckRelationships
+func (model *Model) CheckRelationships() error {
 	for _, seed := range model.Seeds {
-		if err := model.checkRelationships(seed); err != nil {
+		if err := model.CheckRelationship(seed); err != nil {
 			return err
 		}
 	}

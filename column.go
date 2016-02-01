@@ -114,7 +114,7 @@ func (column *Column) CheckValue(seedVal interface{}, model *Model) error {
 	seedType := reflect.TypeOf(seedVal).String()
 
 	if seedType != goType {
-		ColumnTypeError = fmt.Errorf("column[%s] type is wrong, expected %s, current is %s", column.Name, goType, 2)
+		ColumnTypeError = fmt.Errorf("column[%s] type is wrong, expected %s, current is %s", column.Name, goType, seedType)
 		return ColumnTypeError
 	}
 

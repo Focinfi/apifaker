@@ -27,28 +27,7 @@ func NewLineItemWithGinContext(ctx *gin.Context, model *Model) (LineItem, error)
 			continue
 		}
 		if value := ctx.PostForm(column.Name); value != "" {
-			switch column.Type {
-			case number.Name():
-				if numberVal, err := strconv.ParseFloat(value, 64); err != nil {
-					return li, err
-				} else {
-					li.Set(column.Name, numberVal)
-				}
-			case boolean.Name():
-				if booleanVal, err := strconv.ParseBool(value); err != nil {
-					return li, err
-				} else {
-					li.Set(column.Name, booleanVal)
-				}
-			default:
-				li.Set(column.Name, value)
-			}
-
-			// check value
-			seedVal, _ := li.Get(column.Name)
-			if err := column.CheckValue(seedVal, model); err != nil {
-				return li, err
-			}
+			li.SetStringValue(column.Name, value, column.Type)
 		} else {
 			ColumnNameError = fmt.Errorf("doesn't has column: %s", column.Name)
 			return li, ColumnNameError
@@ -91,6 +70,36 @@ func (li LineItem) Get(key string) (interface{}, bool) {
 // Set set key-value of dataMap in LineItem
 func (li *LineItem) Set(key string, value interface{}) {
 	li.dataMap[key] = value
+}
+
+func (li *LineItem) SetStringValue(key, value, valueType string) error {
+	formatValue, err := FormatValue(valueType, value)
+	if err != nil {
+		return err
+	} else {
+		li.Set(key, formatValue)
+	}
+	return nil
+}
+
+func FormatValue(valueType, value string) (interface{}, error) {
+	var nilValue interface{}
+	switch valueType {
+	case number.Name():
+		if numberVal, err := strconv.ParseFloat(value, 64); err != nil {
+			return nilValue, err
+		} else {
+			return numberVal, nil
+		}
+	case boolean.Name():
+		if booleanVal, err := strconv.ParseBool(value); err != nil {
+			return nilValue, err
+		} else {
+			return booleanVal, nil
+		}
+	default:
+		return value, nil
+	}
 }
 
 // ToMap returns dataMap in LineItem

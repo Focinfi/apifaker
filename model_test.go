@@ -21,7 +21,7 @@ func TestNewModelWithPath(t *testing.T) {
 func TestCheckRelationships(t *testing.T) {
 	model, _ := NewModelWithPath(testDir+"/users.json", testRouter)
 	model.HasMany = append(model.HasMany, model.HasMany...)
-	AssertError(t, model.checkRelationshipsMeta())
+	AssertError(t, model.CheckRelationshipsMeta())
 }
 
 func TestCheckModelColumns(t *testing.T) {

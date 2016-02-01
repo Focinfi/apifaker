@@ -181,14 +181,14 @@ fakeApi.SaveTofile()
 Also, you can compose other mutex which implemneted `http.Handler` to the fakeApi
 
 ```go
-  mux := http.NewServeMux()
-  mux.HandleFunc("/greet", func(rw http.ResponseWriter, req *http.Request) {
-    rw.WriteHeader(http.StatusOK)
-    rw.Write([]byte("hello world"))
-  })
+mux := http.NewServeMux()
+mux.HandleFunc("/greet", func(rw http.ResponseWriter, req *http.Request) {
+rw.WriteHeader(http.StatusOK)
+rw.Write([]byte("hello world"))
+})
 
-  fakeApi.MountTo("/fake_api", mux)
-  http.ListenAndServe("localhost:3000", fakeApi)
+fakeApi.MountTo("/fake_api", mux)
+http.ListenAndServe("localhost:3000", fakeApi)
 ```
 
 Then, `/greet` will be available, at the same time, users and books apis will change to be: 
