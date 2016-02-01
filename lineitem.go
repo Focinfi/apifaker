@@ -38,8 +38,8 @@ func NewLineItemWithGinContext(ctx *gin.Context, model *Model) (LineItem, error)
 }
 
 // Id just call Element()
-func (li *LineItem) Id() interface{} {
-	return li.Element()
+func (li *LineItem) Id() float64 {
+	return li.Element().(float64)
 }
 
 // Element returns the value of LineItem's dataMap["id"]
@@ -49,10 +49,10 @@ func (li LineItem) Element() interface{} {
 		if idFloat64, ok := id.(float64); ok {
 			return idFloat64
 		} else {
-			panic(fmt.Sprintf("lineitem: %#v, its is id must be a int", li))
+			panic(fmt.Sprintf("[LineItem]: id must be a float64, %#v\n", li.ToMap()))
 		}
 	} else {
-		panic(fmt.Sprintf("this lineitem has no id: %#v", li))
+		panic(fmt.Sprintf("[LineItem]: must has id: %#v\n", li.ToMap()))
 	}
 }
 
@@ -72,6 +72,8 @@ func (li *LineItem) Set(key string, value interface{}) {
 	li.dataMap[key] = value
 }
 
+// SetStringValue format the given string value with given valueType,
+// set key into LineItem formated value, returns no-nil error while formating
 func (li *LineItem) SetStringValue(key, value, valueType string) error {
 	formatValue, err := FormatValue(valueType, value)
 	if err != nil {
@@ -82,6 +84,7 @@ func (li *LineItem) SetStringValue(key, value, valueType string) error {
 	return nil
 }
 
+// FormatValue format the given string value described by the given valueType
 func FormatValue(valueType, value string) (interface{}, error) {
 	var nilValue interface{}
 	switch valueType {
@@ -128,9 +131,7 @@ func (lis LineItems) Len() int {
 
 // Len returns comparation of value's of two LineItem's "id"
 func (lis LineItems) Less(i, j int) bool {
-	firstId, _ := lis[i].Get("id")
-	secondId, _ := lis[j].Get("id")
-	return firstId.(float64) < secondId.(float64)
+	return lis[i].Id() < lis[j].Id()
 }
 
 // Swap swap two LineItem

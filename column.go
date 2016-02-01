@@ -84,27 +84,25 @@ func (c Column) CheckMeta() error {
 // CheckRelationships
 func (column *Column) CheckRelationships(seedVal interface{}, model *Model) error {
 	// check foreign key
-	if strings.HasSuffix(column.Name, "_id") {
-		resName := strings.TrimSuffix(column.Name, "_id")
-		resPluralName := inflection.Plural(resName)
-		if router, ok := model.router.apiFaker.Routers[resPluralName]; !ok {
-			return fmt.Errorf("has no model: %s", resPluralName)
-		} else {
-			var hasSeed bool
-			for _, seed := range router.Model.Seeds {
-				id, ok := seed["id"]
-				if ok && id == seedVal {
-					hasSeed = true
-					break
-				}
-			}
-			if !hasSeed {
-				return fmt.Errorf("has no lineitem[id=%v] of model[%s]", seedVal, resPluralName)
-			}
+	if !strings.HasSuffix(column.Name, "_id") {
+		return nil
+	}
+
+	resName := strings.TrimSuffix(column.Name, "_id")
+	resPluralName := inflection.Plural(resName)
+	router, ok := model.router.apiFaker.Routers[resPluralName]
+	if !ok {
+		return fmt.Errorf("has no model: %s", resPluralName)
+	}
+
+	for _, li := range router.Model.ToLineItems() {
+		id, ok := li.Get("id")
+		if ok && id == seedVal {
+			return nil
 		}
 	}
 
-	return nil
+	return fmt.Errorf("has no lineitem[id=%v] of model[%s]", seedVal, resPluralName)
 }
 
 // CheckValue
@@ -112,7 +110,6 @@ func (column *Column) CheckValue(seedVal interface{}, model *Model) error {
 	// check type
 	goType := JsonType(column.Type).GoType()
 	seedType := reflect.TypeOf(seedVal).String()
-
 	if seedType != goType {
 		ColumnTypeError = fmt.Errorf("column[%s] type is wrong, expected %s, current is %s", column.Name, goType, seedType)
 		return ColumnTypeError
@@ -129,7 +126,7 @@ func (column *Column) CheckValue(seedVal interface{}, model *Model) error {
 	}
 
 	// check uniqueness
-	if !column.CheckUniqueOf(seedVal) {
+	if !column.CheckUniquenessOf(seedVal) {
 		ColumnUniqueError = fmt.Errorf("cloumn[%s]: %v already exists", column.Name, seedVal)
 		return ColumnUniqueError
 	}
@@ -138,7 +135,7 @@ func (column *Column) CheckValue(seedVal interface{}, model *Model) error {
 }
 
 // CheckUniqueOf check if the given value exists
-func (c *Column) CheckUniqueOf(value interface{}) bool {
+func (c *Column) CheckUniquenessOf(value interface{}) bool {
 	if !c.Unique || c.Name == "id" {
 		return true
 	}
@@ -152,7 +149,7 @@ func (c *Column) CheckUniqueOf(value interface{}) bool {
 }
 
 // AddValue add the give value into the Column's uniqueValues
-func (c *Column) AddValue(value interface{}) {
+func (c *Column) AddUniquenessOf(value interface{}) {
 	if !c.Unique {
 		return
 	}
@@ -165,7 +162,7 @@ func (c *Column) AddValue(value interface{}) {
 }
 
 // RemoveValue remove the given value from Column's uniqueValues
-func (c *Column) RemoveValue(value interface{}) {
+func (c *Column) RemoveUniquenessOf(value interface{}) {
 	if !c.Unique {
 		return
 	}

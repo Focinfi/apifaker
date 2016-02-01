@@ -16,7 +16,7 @@ import (
 type Model struct {
 	Name string `json:"resource_name"`
 
-	// Seeds contains value of "seeds" in json files
+	// Seeds acts as a snapshot of the whole database
 	Seeds   []map[string]interface{} `json:"seeds"`
 	Columns []*Column                `json:"columns"`
 
@@ -24,16 +24,16 @@ type Model struct {
 	HasMany []string `json:"has_many"`
 	HasOne  []string `json:"has_one"`
 
-	// Set Compose *gset.SetThreadSafe to contains data
+	// Set contains runtime data
 	Set *gset.SetThreadSafe `json:"-"`
 
 	// currentId record the number of times of adding
 	currentId float64 `json:"-"`
 
 	// dataChanged record the sign if this Model's Set have been changed
-	dataChanged bool `json:"-"`
-	sync.Mutex  `json:"-"`
-	router      *Router `json:"-"`
+	dataChanged  bool `json:"-"`
+	sync.RWMutex `json:"-"`
+	router       *Router `json:"-"`
 }
 
 //------Model CURD------//
@@ -77,7 +77,7 @@ func NewModelWithPath(path string, router *Router) (*Model, error) {
 
 		// set items from seeds for later relationships validation
 		if err == nil {
-			model.setItems()
+			model.initSet()
 		}
 	}
 
@@ -141,7 +141,7 @@ func (model *Model) Add(li LineItem) error {
 // Update a LineItem in Model
 func (model *Model) Update(id float64, li *LineItem) error {
 	if !model.Has(id) {
-		return fmt.Errorf("model[id:%d] does not exsit", id)
+		return fmt.Errorf("%s[id:%d] does not exsit", model.Name, id)
 	}
 
 	model.Lock()
@@ -188,7 +188,7 @@ func (model *Model) UpdateWithAttrs(id float64, ctx *gin.Context) (LineItem, err
 	// check if element does exsit
 	li, ok := model.Get(id)
 	if !ok {
-		return li, fmt.Errorf("model[id:%d] does not exsit", id)
+		return li, fmt.Errorf("%s[id:%d] does not exsit", model.Name, id)
 	}
 
 	// update model
@@ -221,7 +221,7 @@ func (model *Model) addUniqueValues(lis ...LineItem) {
 	for _, li := range lis {
 		for _, column := range model.Columns {
 			if value, ok := li.Get(column.Name); ok {
-				column.AddValue(value)
+				column.AddUniquenessOf(value)
 			}
 		}
 	}
@@ -232,7 +232,7 @@ func (model *Model) removeUniqueValues(lis ...LineItem) {
 	for _, li := range lis {
 		for _, column := range model.Columns {
 			if value, ok := li.Get(column.Name); ok {
-				column.RemoveValue(value)
+				column.RemoveUniquenessOf(value)
 			}
 		}
 	}
@@ -308,9 +308,8 @@ func (model *Model) DeleteRelatedLis(id float64) {
 		if isRelatedRouter {
 			for _, li := range rotuer.Model.ToLineItems() {
 				key, ok := li.Get(foreign_key)
-				fmt.Printf("[Foriegn]%s, %s \n", key, id)
 				if ok && key == id {
-					rotuer.Model.Delete(li.Id().(float64))
+					rotuer.Model.Delete(li.Id())
 				}
 			}
 		}
@@ -325,14 +324,14 @@ func (model *Model) CheckRelationshipsMeta() error {
 	set := gset.NewSetSimple()
 	for _, resName := range model.HasMany {
 		if set.Has(resName) {
-			return fmt.Errorf("%s has been used", resName)
+			return fmt.Errorf("has_many: %s has been used", resName)
 		} else {
 			set.Add(resName)
 		}
 	}
 	for _, resName := range model.HasOne {
 		if set.Has(resName) {
-			return fmt.Errorf("%s has been used", resName)
+			return fmt.Errorf("has_one: %s has been used", resName)
 		} else {
 			set.Add(resName)
 		}
@@ -345,7 +344,7 @@ func (model *Model) checkColumnsMeta() error {
 	if len(model.Columns) < 1 ||
 		model.Columns[0].Name != "id" ||
 		model.Columns[0].Type != number.Name() {
-		return fmt.Errorf("The first colmun must be id")
+		return fmt.Errorf("The first colmun must be id with number type")
 	}
 
 	for _, column := range model.Columns {
@@ -367,6 +366,17 @@ func (model *Model) CheckRelationship(seed map[string]interface{}) error {
 	return nil
 }
 
+// CheckRelationships
+func (model *Model) CheckRelationships() error {
+	for _, seed := range model.Seeds {
+		if err := model.CheckRelationship(seed); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // checkSeed check specific seed
 func (model *Model) checkSeedBasic(seed map[string]interface{}) error {
 	columns := model.Columns
@@ -380,7 +390,6 @@ func (model *Model) checkSeedBasic(seed map[string]interface{}) error {
 			ColumnNameError = fmt.Errorf("has not column: %s", column.Name)
 			return ColumnNameError
 		} else {
-			// check seedVal
 			if err := column.CheckValue(seedVal, model); err != nil {
 				return err
 			}
@@ -425,25 +434,14 @@ func (model *Model) checkSeeds() error {
 // CheckUniqueness check uniqueness for initialization for ApiFaker
 func (model *Model) CheckUniqueness() error {
 	// check id
-	if model.Len() != len(model.Seeds) {
+	if !model.dataChanged && len(model.Seeds) != model.Len() {
 		return fmt.Errorf("model[%s] has same id", model.Name)
 	}
 
 	// check other unique columns
 	for _, column := range model.Columns {
 		if column.Unique && column.uniqueValues.Len() != model.Len() {
-			return fmt.Errorf("column[%s]in model[%s] is has same values", column.Name, model.Name)
-		}
-	}
-
-	return nil
-}
-
-// CheckRelationships
-func (model *Model) CheckRelationships() error {
-	for _, seed := range model.Seeds {
-		if err := model.CheckRelationship(seed); err != nil {
-			return err
+			return fmt.Errorf("column[%s] in model[%s] is has same values", column.Name, model.Name)
 		}
 	}
 
@@ -454,27 +452,27 @@ func (model *Model) CheckRelationships() error {
 
 //------Seeds and Set------//
 // setItems
-func (model *Model) setItems() {
+func (model *Model) initSet() {
 	if model.Set == nil {
 		model.Set = gset.NewSetThreadSafe()
 	}
 	for _, seed := range model.Seeds {
 		li := NewLineItemWithMap(seed)
-		if id, ok := li.Get("id"); ok {
-			if idFloat, ok := id.(float64); ok {
-				model.updateId(idFloat)
-			}
-		}
 		model.Set.Add(li)
 		model.addUniqueValues(li)
+		model.updateId(li.Id())
 	}
 }
 
 // SetToSeeds
-func (model *Model) SetToSeeds() {
+func (model *Model) backfillSeeds() {
+	model.RLock()
+	defer model.RUnlock()
+
 	models := model.ToLineItems()
 	sort.Sort(models)
 	model.Seeds = models.ToSlice()
+	model.dataChanged = false
 }
 
 //------End Seeds and Set------//
@@ -502,25 +500,18 @@ func (model *Model) SaveToFile(path string) error {
 	model.Lock()
 	defer model.Unlock()
 
-	// open file
 	file, err := os.Create(path)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
-	// set m.Set to m.seeds
-	model.SetToSeeds()
+	model.backfillSeeds()
 	bytes, err := json.Marshal(model)
 	if err != nil {
 		return err
 	}
 	_, err = file.WriteString(string(bytes))
-
-	// set dataChanged to false
-	if err == nil {
-		model.dataChanged = false
-	}
 
 	return err
 }

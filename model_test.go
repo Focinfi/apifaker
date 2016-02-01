@@ -64,12 +64,12 @@ func TestCheckSeed(t *testing.T) {
 	firstLi, _ := userModel.Get(0)
 	toDeleteName, _ := firstLi.Get("name")
 	userModel.Delete(0)
-	AssertEqual(t, userModel.Columns[0].CheckUniqueOf(toDeleteName), true)
+	AssertEqual(t, userModel.Columns[0].CheckUniquenessOf(toDeleteName), true)
 
 	// relationship
 	book := map[string]interface{}{"id": float64(4), "title": "Animal Farm", "user_id": float64(100)}
 	AssertError(t, bookModel.checkSeed(book))
-	t.Log(bookModel.checkSeed(book))
+	// t.Log(bookModel.checkSeed(book))
 }
 
 func TestSaveToFile(t *testing.T) {
@@ -83,9 +83,9 @@ func TestSaveToFile(t *testing.T) {
 
 	li := LineItem{liMap}
 	model.Add(li)
-	model.SetToSeeds()
-	AssertEqual(t, model.Has(4), true)
-	AssertEqual(t, model.dataChanged, true)
+	model.backfillSeeds()
+	AssertEqual(t, len(model.Seeds), 4)
+	AssertEqual(t, model.dataChanged, false)
 
 	liInSeed, _ := model.Get(4)
 	nameInSeed, _ := liInSeed.Get("name")

@@ -60,8 +60,9 @@ func TestNewWithApiDir(t *testing.T) {
 		t.Error(err)
 	} else {
 		AssertEqual(t, len(faker.Routers), 3)
-		AssertEqual(t, faker.Routers["users"].Model.Set.Len(), 3)
-		AssertEqual(t, faker.Routers["books"].Model.Set.Len(), 3)
+		AssertEqual(t, faker.Routers["users"].Model.Len(), 3)
+		AssertEqual(t, faker.Routers["books"].Model.Len(), 3)
+		AssertEqual(t, faker.Routers["avatars"].Model.Len(), 1)
 		userModel := faker.Routers["users"].Model
 		li, _ := userModel.Get(float64(1))
 		userModel.InsertRelatedData(&li)
@@ -110,7 +111,6 @@ func TestSetHandlers(t *testing.T) {
 	userEditedAttrPatch := map[string]interface{}{"name": "Vincent", "age": "22"}
 	response, _ = httpmock.PATCH("/users/4", userEditedAttrPatch)
 	AssertEqual(t, response.Code, http.StatusOK)
-	t.Logf("[PATCH]%s", response.Body)
 
 	respJSON = response.JSON()
 	if resMap, ok := respJSON.(map[string]interface{}); ok {
@@ -119,7 +119,7 @@ func TestSetHandlers(t *testing.T) {
 		AssertEqual(t, resMap["phone"], userParam["phone"])
 		AssertEqual(t, resMap["age"], userParam["age"])
 	} else {
-		t.Errorf("can not set PATCH handlers, response body is: %s", response.Body.String())
+		t.Errorf("can not set PATCH handlers, response body is: %v", response.Body)
 	}
 
 	// 	with invalid params
@@ -139,12 +139,13 @@ func TestSetHandlers(t *testing.T) {
 		AssertEqual(t, resMap["phone"], userEditedAttrPut["phone"])
 		AssertEqual(t, resMap["age"], userEditedAttrPut["age"])
 	} else {
-		t.Errorf("can not set PATCH handlers, response body is: %s", response.Body.String())
+		t.Errorf("can not set PATCH handlers, response body is: %v", response.Body)
 	}
 
 	// with invalid params
 	response, _ = httpmock.PUT("/users/4", userEditedAttrPut)
 	AssertEqual(t, response.Code, http.StatusBadRequest)
+	// t.Logf("[PUT]%s", response.Body)
 
 	// DELETE /users/:id
 	response = httpmock.DELETE("/users/1", nil)
@@ -152,6 +153,7 @@ func TestSetHandlers(t *testing.T) {
 	AssertEqual(t, faker.Routers["users"].Model.Has(3), true)
 	AssertEqual(t, faker.Routers["books"].Model.Set.Len(), 1)
 	AssertEqual(t, faker.Routers["books"].Model.Has(float64(2)), true)
+	AssertEqual(t, faker.Routers["avatars"].Model.Len(), 0)
 }
 
 func TestMountTo(t *testing.T) {
