@@ -37,6 +37,11 @@ var usersFixture = []map[string]interface{}{
 				"user_id": float64(1),
 			},
 		},
+		"avatar": map[string]interface{}{
+			"id":      float64(1),
+			"url":     "http://example.com/avatar.png",
+			"user_id": float64(1),
+		},
 	},
 	{"id": 2, "name": "Antony", "phone": "13213213211", "age": float64(22),
 		"books": []interface{}{
@@ -54,13 +59,13 @@ func TestNewWithApiDir(t *testing.T) {
 	if faker, err := NewWithApiDir(testDir); err != nil {
 		t.Error(err)
 	} else {
-		AssertEqual(t, len(faker.Routers), 2)
+		AssertEqual(t, len(faker.Routers), 3)
 		AssertEqual(t, faker.Routers["users"].Model.Set.Len(), 3)
 		AssertEqual(t, faker.Routers["books"].Model.Set.Len(), 3)
 		userModel := faker.Routers["users"].Model
 		li, _ := userModel.Get(float64(1))
 		userModel.InsertRelatedData(&li)
-		AssertEqual(t, li.Len(), 5)
+		AssertEqual(t, li.Len(), 6)
 	}
 }
 

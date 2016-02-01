@@ -3,6 +3,9 @@
     "has_many": [
         "books"
     ],
+    "has_one": [
+        "avatar"
+    ],
     "columns": [
         {
             "name": "id",

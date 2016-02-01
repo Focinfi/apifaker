@@ -1,0 +1,26 @@
+{
+    "resource_name": "avatars",
+    "columns": [
+        {
+            "name": "id",
+            "type": "number"
+        },
+        {
+            "name": "url",
+            "type": "string",
+            "unique": true
+        },
+        {
+            "name": "user_id",
+            "type": "number"
+        }
+        
+    ],
+    "seeds": [
+        {
+            "id": 1,
+            "url": "http://example.com/avatar.png",
+            "user_id": 1
+        }
+    ]
+}

@@ -231,6 +231,7 @@ func (af *ApiFaker) setHandlers() {
 
 func NewGinEngineWithFaker(faker *ApiFaker) *gin.Engine {
 	engine := gin.Default()
+	gin.SetMode(gin.ReleaseMode)
 	// check id
 	engine.Use(func(ctx *gin.Context) {
 		// check if param "id" is int

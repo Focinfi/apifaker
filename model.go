@@ -247,7 +247,7 @@ func (model *Model) InsertRelatedData(li *LineItem) error {
 	singularName := inflection.Singular(model.Name)
 	for _, resName := range model.HasOne {
 		resStruct := map[string]interface{}{}
-		if resRouter, ok := model.router.apiFaker.Routers[resName]; !ok {
+		if resRouter, ok := model.router.apiFaker.Routers[inflection.Plural(resName)]; !ok {
 			return fmt.Errorf("has no resource %s", resName)
 		} else {
 			resLis := resRouter.Model.ToLineItems()
