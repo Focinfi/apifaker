@@ -6,6 +6,8 @@ If you would like to start a simple json api server for testing front-end, apifa
 
 No need of database, just create some json files, and write two line codes, then, everthing is done, you can start implementing the happy(hope so) front-end features.
 
+[Example project](https://github.com/Focinfi/youzi-server)
+
 ### Install
 `go get github.com/Focinfi/apifaker`
 
