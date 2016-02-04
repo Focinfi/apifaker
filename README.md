@@ -13,7 +13,7 @@ No need of database, just create some json files, and write two line codes, then
 ----
 #### Add a directory
 
-`apifaker` need a directory for containing the api json files。
+`apifaker` need a directory for containing the api json files.
 
 #### Add api files
 
