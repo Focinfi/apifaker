@@ -1,6 +1,6 @@
 ## apifaker
 
-`apifaker` can help you start a json api server in a fast way。
+`apifaker` can help you start a json api server in a fast way.
 
 If you would like to start a simple json api server for testing front-end, apifaker could be a great fit.
 
