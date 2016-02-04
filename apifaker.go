@@ -109,9 +109,12 @@ func (af *ApiFaker) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 // MountTo assign path as af's Prefix and assign handler as af's ExtMux.
 // At same time set hte handlers for af
-func (af *ApiFaker) MountTo(path string, handler http.Handler) {
+func (af *ApiFaker) MountTo(path string) {
 	af.Prefix = path
 	af.setHandlers()
+}
+
+func (af *ApiFaker) IntegrateHandler(handler http.Handler) {
 	af.ExtMux = handler
 }
 

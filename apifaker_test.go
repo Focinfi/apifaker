@@ -164,7 +164,8 @@ func TestMountTo(t *testing.T) {
 		rw.Write([]byte("hello world"))
 	})
 
-	faker.MountTo("/fake_api", mux)
+	faker.MountTo("/fake_api")
+	faker.IntegrateHandler(mux)
 	httpmock.ListenAndServe("localhost", faker)
 
 	response := httpmock.GET("/greet", nil)
