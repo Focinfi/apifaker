@@ -54,7 +54,7 @@ type Column struct {
 // CheckType check type if is in the jsonTypes
 func (column Column) CheckMeta() error {
 	if column.Name == "" {
-		return ColumnsErrorf("colmun[content=%#v] must has a name", column)
+		return ColumnsErrorf("colmun[content=%v] must has a name", column)
 	}
 
 	columnLogName := fmt.Sprintf("column[name=\"%s\"]", column.Name)
@@ -64,7 +64,7 @@ func (column Column) CheckMeta() error {
 
 	// type must be in jsonTypes
 	if !jsonTypes.Has(JsonType(column.Type)) {
-		return ColumnsErrorf("%s use unsupportted type: %s, all supportted types: %#v", columnLogName, column.Type, jsonTypes.ToSlice())
+		return ColumnsErrorf("%s use unsupportted type: %s, all supportted types: %v", columnLogName, column.Type, jsonTypes.ToSlice())
 	}
 
 	// check regexp format
@@ -89,7 +89,7 @@ func (column *Column) CheckRelationships(seedVal interface{}, model *Model) erro
 	resPluralName := inflection.Plural(resName)
 	router, ok := model.router.apiFaker.Routers[resPluralName]
 	if !ok {
-		return ColumnsErrorf("%s has no resource[resoure_name=\"%s\"] %s in column: %#v", columnLogName, resPluralName, column)
+		return ColumnsErrorf("%s has no resource[resoure_name=\"%s\"] %s in column: %v", columnLogName, resPluralName, column)
 	}
 
 	for _, li := range router.Model.ToLineItems() {
@@ -107,9 +107,10 @@ func (column *Column) CheckValue(seedVal interface{}, model *Model) error {
 	// check type
 	columnLogName := fmt.Sprintf("column[name=\"%s\"]", column.Name)
 	goType := JsonType(column.Type).GoType()
+	jsonType := JsonType(column.Type).Name()
 	seedType := reflect.TypeOf(seedVal).String()
 	if seedType != goType {
-		return ColumnsErrorf("%s has wrong type, expected %s, current is %s", columnLogName, goType, seedType)
+		return ColumnsErrorf("%s has wrong type, expected %s, current is %s", columnLogName, jsonType, seedType)
 	}
 
 	// check regexp pattern matching

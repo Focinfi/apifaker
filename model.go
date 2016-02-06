@@ -358,6 +358,19 @@ func (model *Model) checkColumnsMeta() error {
 
 // CheckRelationship
 func (model *Model) CheckRelationship(seed map[string]interface{}) error {
+	for _, resoureName := range model.HasOne {
+		if _, ok := model.router.apiFaker.Routers[inflection.Plural(resoureName)]; !ok {
+			return HasOneErrorf("use unknown reource %s in file: %s", resoureName, model.router.filePath)
+		}
+
+	}
+	for _, resoureName := range model.HasMany {
+		if _, ok := model.router.apiFaker.Routers[inflection.Plural(resoureName)]; !ok {
+			return HasOneErrorf("use unknown reource \"%s\" in file: %s", resoureName, model.router.filePath)
+		}
+
+	}
+
 	for _, column := range model.Columns {
 		if err := column.CheckRelationships(seed[column.Name], model); err != nil {
 			return err
@@ -382,12 +395,12 @@ func (model *Model) checkSeedBasic(seed map[string]interface{}) error {
 	columns := model.Columns
 
 	if len(seed) != len(columns) {
-		return SeedsErrorf("has wrong number of columns: %#v", seed)
+		return SeedsErrorf("has wrong number of columns: %v", seed)
 	}
 
 	for _, column := range columns {
 		if seedVal, ok := seed[column.Name]; !ok {
-			return SeedsErrorf("has no column %s in seed %#v", column.Name, seed)
+			return SeedsErrorf("has no column %s in seed %v", column.Name, seed)
 		} else {
 			if err := column.CheckValue(seedVal, model); err != nil {
 				return err
