@@ -9,11 +9,6 @@ import (
 	"strings"
 )
 
-var ColumnCountError = fmt.Errorf("Has wrong count of columns")
-var ColumnNameError = fmt.Errorf("Has wrong column")
-var ColumnTypeError = fmt.Errorf("Column type wrong")
-var ColumnUniqueError = fmt.Errorf("Column already exists")
-
 type JsonType string
 
 const (
@@ -57,24 +52,25 @@ type Column struct {
 }
 
 // CheckType check type if is in the jsonTypes
-func (c Column) CheckMeta() error {
-	if c.Name == "" {
-		return fmt.Errorf("colmun[%#v] must has a name", c)
+func (column Column) CheckMeta() error {
+	if column.Name == "" {
+		return ColumnsErrorf("colmun[content=%#v] must has a name", column)
 	}
 
-	if c.Type == "" {
-		return fmt.Errorf("column %s, must has a type", c.Name)
+	columnLogName := fmt.Sprintf("column[name=\"%s\"]", column.Name)
+	if column.Type == "" {
+		return ColumnsErrorf("%s must has a type", columnLogName)
 	}
 
 	// type must be in jsonTypes
-	if !jsonTypes.Has(JsonType(c.Type)) {
-		return fmt.Errorf("don't support type: %s, supportted types %#v", c.Type, jsonTypes.ToSlice())
+	if !jsonTypes.Has(JsonType(column.Type)) {
+		return ColumnsErrorf("%s use unsupportted type: %s, all supportted types: %#v", columnLogName, column.Type, jsonTypes.ToSlice())
 	}
 
 	// check regexp format
-	if c.RegexpPattern != "" {
-		if _, err := regexp.Compile(c.RegexpPattern); err != nil {
-			return fmt.Errorf("regexp pattern format[%s] is wrong, err is: %s", c.RegexpPattern, err.Error())
+	if column.RegexpPattern != "" {
+		if _, err := regexp.Compile(column.RegexpPattern); err != nil {
+			return ColumnsErrorf("%s has wrong regexp pattern format: %s, error: %v", columnLogName, column.RegexpPattern)
 		}
 	}
 
@@ -88,11 +84,12 @@ func (column *Column) CheckRelationships(seedVal interface{}, model *Model) erro
 		return nil
 	}
 
+	columnLogName := fmt.Sprintf("column[name=\"%s\"]", column.Name)
 	resName := strings.TrimSuffix(column.Name, "_id")
 	resPluralName := inflection.Plural(resName)
 	router, ok := model.router.apiFaker.Routers[resPluralName]
 	if !ok {
-		return fmt.Errorf("has no model: %s", resPluralName)
+		return ColumnsErrorf("%s has no resource[resoure_name=\"%s\"] %s in column: %#v", columnLogName, resPluralName, column)
 	}
 
 	for _, li := range router.Model.ToLineItems() {
@@ -102,74 +99,73 @@ func (column *Column) CheckRelationships(seedVal interface{}, model *Model) erro
 		}
 	}
 
-	return fmt.Errorf("has no lineitem[id=%v] of model[%s]", seedVal, resPluralName)
+	return ColumnsErrorf("%s has no item[id=%v] of resource[resource_name=\"%s\"]", columnLogName, seedVal, resPluralName)
 }
 
 // CheckValue
 func (column *Column) CheckValue(seedVal interface{}, model *Model) error {
 	// check type
+	columnLogName := fmt.Sprintf("column[name=\"%s\"]", column.Name)
 	goType := JsonType(column.Type).GoType()
 	seedType := reflect.TypeOf(seedVal).String()
 	if seedType != goType {
-		ColumnTypeError = fmt.Errorf("column[%s] type is wrong, expected %s, current is %s", column.Name, goType, seedType)
-		return ColumnTypeError
+		return ColumnsErrorf("%s has wrong type, expected %s, current is %s", columnLogName, goType, seedType)
 	}
 
 	// check regexp pattern matching
 	if column.RegexpPattern != "" && column.Type == str.Name() {
 		matched, err := regexp.Match(column.RegexpPattern, []byte(seedVal.(string)))
 		if err != nil {
-			return fmt.Errorf("column regexp %s has format error", column.RegexpPattern)
+			return ColumnsErrorf("%s has regexp format error, regexp: %s, error: %v", columnLogName, column.RegexpPattern, err)
 		} else if !matched {
-			return fmt.Errorf("colmun[%s]: %#v, doesn't match %s", column.Name, seedVal, column.RegexpPattern)
+			return fmt.Errorf("%s mismatch regexp format, value: %v, format: %s", columnLogName, seedVal, column.RegexpPattern)
 		}
 	}
 
 	// check uniqueness
 	if !column.CheckUniquenessOf(seedVal) {
-		ColumnUniqueError = fmt.Errorf("cloumn[%s]: %v already exists", column.Name, seedVal)
-		return ColumnUniqueError
+		return ColumnsErrorf("%s item value %v already exists", columnLogName, seedVal)
 	}
 
 	return nil
 }
 
 // CheckUniqueOf check if the given value exists
-func (c *Column) CheckUniquenessOf(value interface{}) bool {
-	if !c.Unique || c.Name == "id" {
+func (column *Column) CheckUniquenessOf(value interface{}) bool {
+	if !column.Unique || column.Name == "id" {
 		return true
 	}
 
-	if c.uniqueValues == nil {
-		c.uniqueValues = NewSetThreadSafe()
+	if column.uniqueValues == nil {
+		column.uniqueValues = NewSetThreadSafe()
 		return true
 	} else {
-		return !c.uniqueValues.Has(T(value))
+		return !column.uniqueValues.Has(T(value))
 	}
 }
 
 // AddValue add the give value into the Column's uniqueValues
-func (c *Column) AddUniquenessOf(value interface{}) {
-	if !c.Unique {
+func (column *Column) AddUniquenessOf(value interface{}) {
+	if !column.Unique {
 		return
 	}
 
-	if c.uniqueValues == nil {
-		c.uniqueValues = NewSetThreadSafe(T(value))
+	if column.uniqueValues == nil {
+		column.uniqueValues = NewSetThreadSafe(T(value))
 	} else {
-		c.uniqueValues.Add(T(value))
+		column.uniqueValues.Add(T(value))
 	}
 }
 
 // RemoveValue remove the given value from Column's uniqueValues
-func (c *Column) RemoveUniquenessOf(value interface{}) {
-	if !c.Unique {
+func (column *Column) RemoveUniquenessOf(value interface{}) {
+	if !column.Unique {
 		return
 	}
 
-	if c.uniqueValues == nil {
-		c.uniqueValues = NewSetThreadSafe()
+	if column.uniqueValues == nil {
+		column.uniqueValues = NewSetThreadSafe()
 	} else {
-		c.uniqueValues.Remove(T(value))
+		column.uniqueValues.Remove(T(value))
 	}
 }

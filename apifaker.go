@@ -54,7 +54,7 @@ func NewWithApiDir(dir string) (*ApiFaker, error) {
 				return err
 			} else {
 				if _, ok := faker.Routers[router.Model.Name]; ok {
-					panic(router.Model.Name + " has been existed")
+					return JsonFileErrorf("%s has been existed", router.Model.Name)
 				} else {
 					faker.Routers[router.Model.Name] = router
 				}
@@ -182,11 +182,11 @@ func (af *ApiFaker) setHandlers() {
 					// create a new lineitems with ctx.PostForm()
 					li, err := NewLineItemWithGinContext(ctx, model)
 					if err != nil {
-						ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+						ctx.JSON(http.StatusBadRequest, ResponseErrorMsg(err))
 					} else {
 						// add this lineitem to model
 						if err = model.Add(li); err != nil {
-							ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+							ctx.JSON(http.StatusBadRequest, ResponseErrorMsg(err))
 						} else {
 							ctx.JSON(http.StatusOK, li.ToMap())
 						}
@@ -198,14 +198,14 @@ func (af *ApiFaker) setHandlers() {
 					newLi, err := NewLineItemWithGinContext(ctx, model)
 
 					if err != nil {
-						ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+						ctx.JSON(http.StatusBadRequest, ResponseErrorMsg(err))
 						return
 					}
 
 					// update
 					id, _ := ctx.Get("idFloat64")
 					if err := model.Update(id.(float64), &newLi); err != nil {
-						ctx.JSON(http.StatusBadRequest, map[string]string{"message": err.Error()})
+						ctx.JSON(http.StatusBadRequest, ResponseErrorMsg(err))
 					} else {
 						ctx.JSON(http.StatusOK, newLi.ToMap())
 					}
@@ -215,7 +215,7 @@ func (af *ApiFaker) setHandlers() {
 					// update with attrs, got error if attrs is not complete
 					id, _ := ctx.Get("idFloat64")
 					if li, err := model.UpdateWithAttrs(id.(float64), ctx); err != nil {
-						ctx.JSON(http.StatusBadRequest, map[string]string{"message": err.Error()})
+						ctx.JSON(http.StatusBadRequest, ResponseErrorMsg(err))
 					} else {
 						ctx.JSON(http.StatusOK, li.ToMap())
 					}
@@ -246,7 +246,7 @@ func NewGinEngineWithFaker(faker *ApiFaker) *gin.Engine {
 
 		id, err := strconv.ParseFloat(idStr, 64)
 		if err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+			ctx.JSON(http.StatusBadRequest, ResponseErrorMsg(err))
 			return
 		}
 

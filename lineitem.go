@@ -29,8 +29,7 @@ func NewLineItemWithGinContext(ctx *gin.Context, model *Model) (LineItem, error)
 		if value := ctx.PostForm(column.Name); value != "" {
 			li.SetStringValue(column.Name, value, column.Type)
 		} else {
-			ColumnNameError = fmt.Errorf("doesn't has column: %s", column.Name)
-			return li, ColumnNameError
+			return li, fmt.Errorf("doesn't has column: %s", column.Name)
 		}
 	}
 

@@ -64,7 +64,7 @@ func NewModelWithPath(path string, router *Router) (*Model, error) {
 	}
 	model := NewModel(router)
 	if err = json.Unmarshal(bytes, model); err != nil {
-		err = fmt.Errorf("[apifaker] json format error: %s, file: %s", err.Error(), path)
+		err = JsonFileErrorf("format error: %v, file: %s", err, path)
 	} else {
 		// use CheckQueue to check columns and seeds
 		err = gtester.NewCheckQueue().Add(func() error {
@@ -141,7 +141,7 @@ func (model *Model) Add(li LineItem) error {
 // Update a LineItem in Model
 func (model *Model) Update(id float64, li *LineItem) error {
 	if !model.Has(id) {
-		return fmt.Errorf("%s[id:%d] does not exsit", model.Name, id)
+		return SeedsErrorf("model %s[id:%d] does not exsit", model.Name, id)
 	}
 
 	model.Lock()
@@ -188,7 +188,7 @@ func (model *Model) UpdateWithAttrs(id float64, ctx *gin.Context) (LineItem, err
 	// check if element does exsit
 	li, ok := model.Get(id)
 	if !ok {
-		return li, fmt.Errorf("%s[id:%d] does not exsit", model.Name, id)
+		return li, SeedsErrorf("model %s[id:%d] does not exsit", model.Name, id)
 	}
 
 	// update model
@@ -248,7 +248,7 @@ func (model *Model) InsertRelatedData(li *LineItem) error {
 	for _, resName := range model.HasOne {
 		resStruct := map[string]interface{}{}
 		if resRouter, ok := model.router.apiFaker.Routers[inflection.Plural(resName)]; !ok {
-			return fmt.Errorf("has no resource %s", resName)
+			return HasOneErrorf("has no resource %s, file: %s", resName, model.router.filePath)
 		} else {
 			resLis := resRouter.Model.ToLineItems()
 			sort.Sort(resLis)
@@ -269,7 +269,7 @@ func (model *Model) InsertRelatedData(li *LineItem) error {
 	for _, resName := range model.HasMany {
 		resSlice := []interface{}{}
 		if resRouter, ok := model.router.apiFaker.Routers[resName]; !ok {
-			return fmt.Errorf("has no resource %s", resName)
+			return HasManyErrorf("has no resource %s, file", resName, model.router.filePath)
 		} else {
 			resLis := resRouter.Model.ToLineItems()
 			sort.Sort(resLis)
@@ -324,14 +324,14 @@ func (model *Model) CheckRelationshipsMeta() error {
 	set := gset.NewSetSimple()
 	for _, resName := range model.HasMany {
 		if set.Has(resName) {
-			return fmt.Errorf("has_many: %s has been used", resName)
+			return HasManyErrorf("%s has been used", resName)
 		} else {
 			set.Add(resName)
 		}
 	}
 	for _, resName := range model.HasOne {
 		if set.Has(resName) {
-			return fmt.Errorf("has_one: %s has been used", resName)
+			return HasOneErrorf("%s has been used", resName)
 		} else {
 			set.Add(resName)
 		}
@@ -344,7 +344,7 @@ func (model *Model) checkColumnsMeta() error {
 	if len(model.Columns) < 1 ||
 		model.Columns[0].Name != "id" ||
 		model.Columns[0].Type != number.Name() {
-		return fmt.Errorf("The first colmun must be id with number type")
+		return ColumnsErrorf("The first colmun must be id with number type")
 	}
 
 	for _, column := range model.Columns {
@@ -382,13 +382,12 @@ func (model *Model) checkSeedBasic(seed map[string]interface{}) error {
 	columns := model.Columns
 
 	if len(seed) != len(columns) {
-		return ColumnCountError
+		return SeedsErrorf("has wrong number of columns: %#v", seed)
 	}
 
 	for _, column := range columns {
 		if seedVal, ok := seed[column.Name]; !ok {
-			ColumnNameError = fmt.Errorf("has not column: %s", column.Name)
-			return ColumnNameError
+			return SeedsErrorf("has no column %s in seed %#v", column.Name, seed)
 		} else {
 			if err := column.CheckValue(seedVal, model); err != nil {
 				return err
@@ -435,13 +434,13 @@ func (model *Model) checkSeeds() error {
 func (model *Model) CheckUniqueness() error {
 	// check id
 	if !model.dataChanged && len(model.Seeds) != model.Len() {
-		return fmt.Errorf("model[%s] has same id", model.Name)
+		return SeedsErrorf("model[name=\"%s\"] has same id", model.Name)
 	}
 
 	// check other unique columns
 	for _, column := range model.Columns {
 		if column.Unique && column.uniqueValues.Len() != model.Len() {
-			return fmt.Errorf("column[%s] in model[%s] is has same values", column.Name, model.Name)
+			return SeedsErrorf("column[name=\"%s\"] in model[name=\"%s\"] has same values", column.Name, model.Name)
 		}
 	}
 

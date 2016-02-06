@@ -28,15 +28,15 @@ func TestCheckModelColumns(t *testing.T) {
 	// has wrong columns count
 	model, _ := NewModelWithPath(testDir+"/users.json", testRouter)
 	model.Seeds[0] = map[string]interface{}{}
-	if err := model.checkSeeds(); err != ColumnCountError {
-		t.Errorf("Can not detect columns count of seed item, err is %v", err)
+	if err := model.checkSeeds(); err == nil {
+		t.Errorf("Can not detect columns count of seed item")
 	}
 
 	// has wrong column
 	model, _ = NewModelWithPath(testDir+"/users.json", testRouter)
 	model.Seeds[0] = map[string]interface{}{"foo0": "bar", "foo1": "bar", "foo2": "bar", "foo3": 1}
-	if err := model.checkSeeds(); err != ColumnNameError {
-		t.Errorf("Can not check column name, err is: %v", err)
+	if err := model.checkSeeds(); err == nil {
+		t.Errorf("Can not check column name")
 	}
 }
 func TestCheckColumnsTypes(t *testing.T) {
