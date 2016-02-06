@@ -73,7 +73,8 @@ func TestCheckSeed(t *testing.T) {
 }
 
 func TestSaveToFile(t *testing.T) {
-	model, _ := NewModelWithPath(testDir+"/users.json", testRouter)
+	faker, _ := NewWithApiDir(testDir)
+	model := faker.Routers["users"].Model
 	liMap := map[string]interface{}{
 		"id":    float64(4),
 		"name":  "Monica",
@@ -82,7 +83,8 @@ func TestSaveToFile(t *testing.T) {
 	}
 
 	li := LineItem{liMap}
-	model.Add(li)
+	e := model.Add(li)
+	t.Log(e)
 	model.backfillSeeds()
 	AssertEqual(t, len(model.Seeds), 4)
 	AssertEqual(t, model.dataChanged, false)
