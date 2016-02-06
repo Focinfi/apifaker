@@ -344,7 +344,7 @@ func (model *Model) checkColumnsMeta() error {
 	if len(model.Columns) < 1 ||
 		model.Columns[0].Name != "id" ||
 		model.Columns[0].Type != number.Name() {
-		return ColumnsErrorf("The first colmun must be id with number type")
+		return ColumnsErrorf("The first colmun must be id with number type in file: %s", model.router.filePath)
 	}
 
 	for _, column := range model.Columns {
@@ -400,7 +400,7 @@ func (model *Model) checkSeedBasic(seed map[string]interface{}) error {
 
 	for _, column := range columns {
 		if seedVal, ok := seed[column.Name]; !ok {
-			return SeedsErrorf("has no column %s in seed %v", column.Name, seed)
+			return SeedsErrorf("has no column \"%s\" in seed: %v", column.Name, seed)
 		} else {
 			if err := column.CheckValue(seedVal, model); err != nil {
 				return err
