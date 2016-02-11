@@ -1,13 +1,18 @@
 package apifaker
 
 import (
-	"github.com/Focinfi/gset"
-	. "github.com/Focinfi/gtester"
+	"fmt"
+	"github.com/Focinfi/gtester"
 	"github.com/Focinfi/gtester/httpmock"
+	. "github.com/smartystreets/goconvey/convey"
 	"net/http"
 	"os"
 	"testing"
 )
+
+var Describ = Convey
+var Context = Convey
+var It = So
 
 var testDir = os.Getenv("GOPATH") + "/src/github.com/Focinfi/apifaker/api_static_test"
 
@@ -55,123 +60,141 @@ var usersFixture = []map[string]interface{}{
 	{"id": 3, "name": "Foci", "phone": "13213213212", "age": float64(22)},
 }
 
-func TestNewWithApiDir(t *testing.T) {
-	if faker, err := NewWithApiDir(testDir); err != nil {
-		t.Error(err)
+func shouldHasJsonResponse(response interface{}, exp ...interface{}) string {
+	if record, ok := response.(*httpmock.Recorder); ok {
+		if !gtester.ResponseEqual(record, exp[0]) {
+			return fmt.Sprintf("Expect: '%v'\nActual: '%v\n", exp[0], record.Body)
+		}
 	} else {
-		AssertEqual(t, len(faker.Routers), 3)
-		AssertEqual(t, faker.Routers["users"].Model.Len(), 3)
-		AssertEqual(t, faker.Routers["books"].Model.Len(), 3)
-		AssertEqual(t, faker.Routers["avatars"].Model.Len(), 1)
+		panic("First parameter of shouldHasJsonResponse() must be '*httpmock.Recorder'")
+	}
+	return ""
+}
+
+func TestApiFaker(t *testing.T) {
+	faker, err := NewWithApiDir(testDir)
+	Describ("NewWithDir", t, func() {
+		It(err, ShouldBeNil)
+		It(len(faker.Routers), ShouldEqual, 3)
+
 		userModel := faker.Routers["users"].Model
+		bookModel := faker.Routers["books"].Model
+		avatarsModel := faker.Routers["avatars"].Model
+		It(userModel.Len(), ShouldEqual, 3)
+		It(bookModel.Len(), ShouldEqual, 3)
+		It(avatarsModel.Len(), ShouldEqual, 1)
+
 		li, _ := userModel.Get(float64(1))
 		userModel.InsertRelatedData(&li)
-		AssertEqual(t, li.Len(), 6)
-	}
-}
-
-func TestSetHandlers(t *testing.T) {
-	faker, _ := NewWithApiDir(testDir)
-	httpmock.ListenAndServe("localhost", faker)
-
-	// GET /users/:id
-	response := httpmock.GET("/users/1", nil)
-	AssertResponseEqual(t, response, usersFixture[0])
-
-	// GET /users
-	response = httpmock.GET("/users", nil)
-	AssertResponseEqual(t, response, usersFixture)
-
-	// GET /users/xxx
-	response = httpmock.GET("/users/xxx", nil)
-	AssertEqual(t, response.Code, http.StatusBadRequest)
-
-	// POST /users
-	// 	with valid params
-	response, _ = httpmock.POSTForm("/users", userParam)
-	AssertEqual(t, response.Code, http.StatusOK)
-
-	respJSON := response.JSON()
-	if resMap, ok := respJSON.(map[string]interface{}); ok {
-		AssertEqual(t, resMap["id"], float64(4))
-		AssertEqual(t, resMap["name"], userParam["name"])
-		AssertEqual(t, resMap["phone"], userParam["phone"])
-		AssertEqual(t, resMap["age"], (userParam["age"]))
-	} else {
-		t.Errorf("can not set Post handlers, response body is: %s", response.Body.String())
-	}
-	AssertEqual(t, faker.Routers["users"].Model.Set.Has(gset.T(float64(4))), true)
-
-	// 	with invalid params
-	response, _ = httpmock.POSTForm("/users", invalidUserParam)
-	AssertEqual(t, response.Code, http.StatusBadRequest)
-
-	// PATCH /users/:id
-	// 	with valid params
-	userEditedAttrPatch := map[string]interface{}{"name": "Vincent", "age": "22"}
-	response, _ = httpmock.PATCH("/users/4", userEditedAttrPatch)
-	AssertEqual(t, response.Code, http.StatusOK)
-
-	respJSON = response.JSON()
-	if resMap, ok := respJSON.(map[string]interface{}); ok {
-		AssertEqual(t, resMap["id"], float64(4))
-		AssertEqual(t, resMap["name"], userEditedAttrPatch["name"])
-		AssertEqual(t, resMap["phone"], userParam["phone"])
-		AssertEqual(t, resMap["age"], userParam["age"])
-	} else {
-		t.Errorf("can not set PATCH handlers, response body is: %v", response.Body)
-	}
-
-	// 	with invalid params
-	response, _ = httpmock.PATCH("/users/4", invalidUserParam)
-	AssertEqual(t, response.Code, http.StatusBadRequest)
-
-	// PUT /users/:id
-	// 	with valid params
-	userEditedAttrPut := map[string]interface{}{"name": "Vincent", "phone": "13213213217", "age": float64(23)}
-	response, _ = httpmock.PUT("/users/4", userEditedAttrPut)
-	AssertEqual(t, response.Code, http.StatusOK)
-
-	respJSON = response.JSON()
-	if resMap, ok := respJSON.(map[string]interface{}); ok {
-		AssertEqual(t, resMap["id"], float64(4))
-		AssertEqual(t, resMap["name"], userEditedAttrPut["name"])
-		AssertEqual(t, resMap["phone"], userEditedAttrPut["phone"])
-		AssertEqual(t, resMap["age"], userEditedAttrPut["age"])
-	} else {
-		t.Errorf("can not set PATCH handlers, response body is: %v", response.Body)
-	}
-
-	// with invalid params
-	response, _ = httpmock.PUT("/users/4", userEditedAttrPut)
-	AssertEqual(t, response.Code, http.StatusBadRequest)
-	// t.Logf("[PUT]%s", response.Body)
-
-	// DELETE /users/:id
-	response = httpmock.DELETE("/users/1", nil)
-	AssertEqual(t, response.Code, http.StatusOK)
-	AssertEqual(t, faker.Routers["users"].Model.Has(3), true)
-	AssertEqual(t, faker.Routers["books"].Model.Set.Len(), 1)
-	AssertEqual(t, faker.Routers["books"].Model.Has(float64(2)), true)
-	AssertEqual(t, faker.Routers["avatars"].Model.Len(), 0)
-}
-
-func TestMountTo(t *testing.T) {
-	faker, _ := NewWithApiDir(testDir)
-	mux := http.NewServeMux()
-	mux.HandleFunc("/greet", func(rw http.ResponseWriter, req *http.Request) {
-		rw.WriteHeader(http.StatusOK)
-		rw.Write([]byte("hello world"))
+		It(li.Len(), ShouldEqual, 6)
 	})
 
-	faker.MountTo("/fake_api")
-	faker.IntegrateHandler(mux)
 	httpmock.ListenAndServe("localhost", faker)
+	Describ("SetHandlers", t, func() {
+		Describ("GET /users/:id", func() {
+			Context("when pass a valid id\n", func() {
+				response := httpmock.GET("/users/1", nil)
+				It(response, shouldHasJsonResponse, usersFixture[0])
+			})
 
-	response := httpmock.GET("/greet", nil)
-	AssertEqual(t, response.Body.String(), "hello world")
+			Context("when pass a invalid id\n", func() {
+				response := httpmock.GET("/users/xxx", nil)
+				It(response.Code, ShouldEqual, http.StatusBadRequest)
+			})
+		})
 
-	response = httpmock.GET("/fake_api/users/1", nil)
-	AssertEqual(t, response.Code, http.StatusOK)
-	AssertResponseEqual(t, response, usersFixture[0])
+		Describ("GET /users", func() {
+			response := httpmock.GET("/users", nil)
+			It(response, shouldHasJsonResponse, usersFixture)
+		})
+
+		Describ("POST /users", func() {
+			Context("when pass valid params", func() {
+				response, _ := httpmock.POSTForm("/users", userParam)
+				It(response.Code, ShouldEqual, http.StatusOK)
+
+				respJSON := response.JSON()
+				resMap, ok := respJSON.(map[string]interface{})
+				It(ok, ShouldBeTrue)
+				It(resMap["id"], ShouldEqual, float64(4))
+				It(resMap["name"], ShouldEqual, userParam["name"])
+				It(resMap["phone"], ShouldEqual, userParam["phone"])
+				It(resMap["age"], ShouldEqual, (userParam["age"]))
+				It(faker.Routers["users"].Model.Has(4), ShouldBeTrue)
+			})
+
+			Context("when pass invalid params", func() {
+				response, _ := httpmock.POSTForm("/users", invalidUserParam)
+				It(response.Code, ShouldEqual, http.StatusBadRequest)
+			})
+		})
+
+		Describ("PATCH /users/:id", func() {
+			Context("when pass valid params", func() {
+				userEditedAttrPatch := map[string]interface{}{"name": "Vincent", "age": "22"}
+				response, _ := httpmock.PATCH("/users/4", userEditedAttrPatch)
+				It(response.Code, ShouldEqual, http.StatusOK)
+
+				respJSON := response.JSON()
+				resMap, ok := respJSON.(map[string]interface{})
+				It(ok, ShouldBeTrue)
+				It(resMap["id"], ShouldEqual, float64(4))
+				It(resMap["name"], ShouldEqual, userEditedAttrPatch["name"])
+				It(resMap["phone"], ShouldEqual, userParam["phone"])
+				It(resMap["age"], ShouldEqual, userParam["age"])
+			})
+
+			Context("when pass invalid params", func() {
+				response, _ := httpmock.PATCH("/users/4", invalidUserParam)
+				It(response.Code, ShouldEqual, http.StatusBadRequest)
+			})
+		})
+
+		Describ("PUT /users/:id", func() {
+			userEditedAttrPut := map[string]interface{}{"name": "Vincent", "phone": "13213213217", "age": float64(23)}
+			Context("when pass valid params", func() {
+				response, _ := httpmock.PUT("/users/4", userEditedAttrPut)
+				It(response.Code, ShouldEqual, http.StatusOK)
+
+				respJSON := response.JSON()
+				resMap, ok := respJSON.(map[string]interface{})
+				It(ok, ShouldBeTrue)
+				It(resMap["id"], ShouldEqual, float64(4))
+				It(resMap["name"], ShouldEqual, userEditedAttrPut["name"])
+				It(resMap["phone"], ShouldEqual, userEditedAttrPut["phone"])
+				It(resMap["age"], ShouldEqual, userEditedAttrPut["age"])
+			})
+
+			Context("when pass invalid params", func() {
+				response, _ := httpmock.PUT("/users/4", userEditedAttrPut)
+				It(response.Code, ShouldEqual, http.StatusBadRequest)
+			})
+		})
+
+		Describ("DELETE /users/:id", func() {
+			response := httpmock.DELETE("/users/1", nil)
+			It(response.Code, ShouldEqual, http.StatusOK)
+			It(faker.Routers["users"].Model.Has(3), ShouldBeTrue)
+			It(faker.Routers["books"].Model.Set.Len(), ShouldEqual, 1)
+			It(faker.Routers["books"].Model.Has(float64(2)), ShouldBeTrue)
+			It(faker.Routers["avatars"].Model.Len(), ShouldEqual, 0)
+		})
+	})
+
+	Describ("MountToAndIntegrateHandler", t, func() {
+		mux := http.NewServeMux()
+		mux.HandleFunc("/greet", func(rw http.ResponseWriter, req *http.Request) {
+			rw.WriteHeader(http.StatusOK)
+			rw.Write([]byte("hello world"))
+		})
+
+		faker.MountTo("/fake_api")
+		faker.IntegrateHandler(mux)
+
+		response := httpmock.GET("/greet", nil)
+		It(response.Body.String(), ShouldEqual, "hello world")
+
+		response = httpmock.GET("/fake_api/users/2", nil)
+		It(response, shouldHasJsonResponse, usersFixture[1])
+	})
 }

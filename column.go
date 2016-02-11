@@ -110,7 +110,7 @@ func (column *Column) CheckValue(seedVal interface{}, model *Model) error {
 	jsonType := JsonType(column.Type).Name()
 	seedType := reflect.TypeOf(seedVal).String()
 	if seedType != goType {
-		return ColumnsErrorf("%s has wrong type, expected %s, current is %s", columnLogName, jsonType, seedType)
+		return ColumnsErrorf("%s has wrong type, expect a %s, but use a %s", columnLogName, jsonType, seedType)
 	}
 
 	// check regexp pattern matching
