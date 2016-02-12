@@ -12,12 +12,13 @@ import (
 
 var Describ = Convey
 var Context = Convey
-var It = So
+var It = Convey
+var Expect = So
 
 var testDir = os.Getenv("GOPATH") + "/src/github.com/Focinfi/apifaker/api_static_test"
 
 var userParam = map[string]interface{}{
-	"name": "Ameng", "phone": "13213213214", "age": float64(22),
+	"id": float64(4), "name": "Ameng", "phone": "13213213214", "age": float64(22),
 }
 
 var invalidUserParam = map[string]interface{}{
@@ -73,20 +74,17 @@ func shouldHasJsonResponse(response interface{}, exp ...interface{}) string {
 
 func TestApiFaker(t *testing.T) {
 	faker, err := NewWithApiDir(testDir)
+	userModel := faker.Routers["users"].Model
+	bookModel := faker.Routers["books"].Model
+	avatarsModel := faker.Routers["avatars"].Model
 	Describ("NewWithDir", t, func() {
-		It(err, ShouldBeNil)
-		It(len(faker.Routers), ShouldEqual, 3)
-
-		userModel := faker.Routers["users"].Model
-		bookModel := faker.Routers["books"].Model
-		avatarsModel := faker.Routers["avatars"].Model
-		It(userModel.Len(), ShouldEqual, 3)
-		It(bookModel.Len(), ShouldEqual, 3)
-		It(avatarsModel.Len(), ShouldEqual, 1)
-
-		li, _ := userModel.Get(float64(1))
-		userModel.InsertRelatedData(&li)
-		It(li.Len(), ShouldEqual, 6)
+		It("allocates and returns a new ApiFaker", func() {
+			Expect(err, ShouldBeNil)
+			Expect(len(faker.Routers), ShouldEqual, 3)
+			Expect(userModel.Len(), ShouldEqual, 3)
+			Expect(bookModel.Len(), ShouldEqual, 3)
+			Expect(avatarsModel.Len(), ShouldEqual, 1)
+		})
 	})
 
 	httpmock.ListenAndServe("localhost", faker)
@@ -94,38 +92,41 @@ func TestApiFaker(t *testing.T) {
 		Describ("GET /users/:id", func() {
 			Context("when pass a valid id\n", func() {
 				response := httpmock.GET("/users/1", nil)
-				It(response, shouldHasJsonResponse, usersFixture[0])
+				It("returns the first user", func() {
+					Expect(response, shouldHasJsonResponse, usersFixture[0])
+				})
 			})
 
 			Context("when pass a invalid id\n", func() {
 				response := httpmock.GET("/users/xxx", nil)
-				It(response.Code, ShouldEqual, http.StatusBadRequest)
+				It("returns 404", func() {
+					Expect(response.Code, ShouldEqual, http.StatusBadRequest)
+				})
 			})
 		})
 
 		Describ("GET /users", func() {
 			response := httpmock.GET("/users", nil)
-			It(response, shouldHasJsonResponse, usersFixture)
+			It("returns 200", func() {
+				Expect(response, shouldHasJsonResponse, usersFixture)
+			})
 		})
 
 		Describ("POST /users", func() {
 			Context("when pass valid params", func() {
 				response, _ := httpmock.POSTForm("/users", userParam)
-				It(response.Code, ShouldEqual, http.StatusOK)
-
-				respJSON := response.JSON()
-				resMap, ok := respJSON.(map[string]interface{})
-				It(ok, ShouldBeTrue)
-				It(resMap["id"], ShouldEqual, float64(4))
-				It(resMap["name"], ShouldEqual, userParam["name"])
-				It(resMap["phone"], ShouldEqual, userParam["phone"])
-				It(resMap["age"], ShouldEqual, (userParam["age"]))
-				It(faker.Routers["users"].Model.Has(4), ShouldBeTrue)
+				It("returns 200 and the created user", func() {
+					Expect(response.Code, ShouldEqual, http.StatusOK)
+					Expect(response, shouldHasJsonResponse, userParam)
+					Expect(faker.Routers["users"].Model.Has(float64(4)), ShouldBeTrue)
+				})
 			})
 
 			Context("when pass invalid params", func() {
 				response, _ := httpmock.POSTForm("/users", invalidUserParam)
-				It(response.Code, ShouldEqual, http.StatusBadRequest)
+				It("returns 404", func() {
+					Expect(response.Code, ShouldEqual, http.StatusBadRequest)
+				})
 			})
 		})
 
@@ -133,51 +134,53 @@ func TestApiFaker(t *testing.T) {
 			Context("when pass valid params", func() {
 				userEditedAttrPatch := map[string]interface{}{"name": "Vincent", "age": "22"}
 				response, _ := httpmock.PATCH("/users/4", userEditedAttrPatch)
-				It(response.Code, ShouldEqual, http.StatusOK)
-
 				respJSON := response.JSON()
 				resMap, ok := respJSON.(map[string]interface{})
-				It(ok, ShouldBeTrue)
-				It(resMap["id"], ShouldEqual, float64(4))
-				It(resMap["name"], ShouldEqual, userEditedAttrPatch["name"])
-				It(resMap["phone"], ShouldEqual, userParam["phone"])
-				It(resMap["age"], ShouldEqual, userParam["age"])
+				It("returns 200 and the edited user", func() {
+					Expect(response.Code, ShouldEqual, http.StatusOK)
+					Expect(ok, ShouldBeTrue)
+					Expect(resMap["id"], ShouldEqual, float64(4))
+					Expect(resMap["name"], ShouldEqual, userEditedAttrPatch["name"])
+					Expect(resMap["phone"], ShouldEqual, userParam["phone"])
+					Expect(resMap["age"], ShouldEqual, userParam["age"])
+				})
 			})
 
 			Context("when pass invalid params", func() {
 				response, _ := httpmock.PATCH("/users/4", invalidUserParam)
-				It(response.Code, ShouldEqual, http.StatusBadRequest)
+				It("returns 404", func() {
+					Expect(response.Code, ShouldEqual, http.StatusBadRequest)
+				})
 			})
 		})
 
 		Describ("PUT /users/:id", func() {
-			userEditedAttrPut := map[string]interface{}{"name": "Vincent", "phone": "13213213217", "age": float64(23)}
+			userEditedAttrPut := map[string]interface{}{"id": float64(4), "name": "Vincent", "phone": "13213213217", "age": float64(23)}
 			Context("when pass valid params", func() {
 				response, _ := httpmock.PUT("/users/4", userEditedAttrPut)
-				It(response.Code, ShouldEqual, http.StatusOK)
-
-				respJSON := response.JSON()
-				resMap, ok := respJSON.(map[string]interface{})
-				It(ok, ShouldBeTrue)
-				It(resMap["id"], ShouldEqual, float64(4))
-				It(resMap["name"], ShouldEqual, userEditedAttrPut["name"])
-				It(resMap["phone"], ShouldEqual, userEditedAttrPut["phone"])
-				It(resMap["age"], ShouldEqual, userEditedAttrPut["age"])
+				It("returns 200 and and the edited user", func() {
+					Expect(response.Code, ShouldEqual, http.StatusOK)
+					Expect(response, shouldHasJsonResponse, userEditedAttrPut)
+				})
 			})
 
 			Context("when pass invalid params", func() {
 				response, _ := httpmock.PUT("/users/4", userEditedAttrPut)
-				It(response.Code, ShouldEqual, http.StatusBadRequest)
+				It("returns 404", func() {
+					Expect(response.Code, ShouldEqual, http.StatusBadRequest)
+				})
 			})
 		})
 
 		Describ("DELETE /users/:id", func() {
 			response := httpmock.DELETE("/users/1", nil)
-			It(response.Code, ShouldEqual, http.StatusOK)
-			It(faker.Routers["users"].Model.Has(3), ShouldBeTrue)
-			It(faker.Routers["books"].Model.Set.Len(), ShouldEqual, 1)
-			It(faker.Routers["books"].Model.Has(float64(2)), ShouldBeTrue)
-			It(faker.Routers["avatars"].Model.Len(), ShouldEqual, 0)
+			It("returns 200 and delete all related resources", func() {
+				Expect(response.Code, ShouldEqual, http.StatusOK)
+				Expect(faker.Routers["users"].Model.Len(), ShouldEqual, 3)
+				Expect(faker.Routers["books"].Model.Set.Len(), ShouldEqual, 1)
+				Expect(faker.Routers["books"].Model.Has(float64(2)), ShouldBeTrue)
+				Expect(faker.Routers["avatars"].Model.Len(), ShouldEqual, 0)
+			})
 		})
 	})
 
@@ -187,14 +190,16 @@ func TestApiFaker(t *testing.T) {
 			rw.WriteHeader(http.StatusOK)
 			rw.Write([]byte("hello world"))
 		})
-
 		faker.MountTo("/fake_api")
 		faker.IntegrateHandler(mux)
 
-		response := httpmock.GET("/greet", nil)
-		It(response.Body.String(), ShouldEqual, "hello world")
-
-		response = httpmock.GET("/fake_api/users/2", nil)
-		It(response, shouldHasJsonResponse, usersFixture[1])
+		It("has a /greet route", func() {
+			response := httpmock.GET("/greet", nil)
+			Expect(response.Body.String(), ShouldEqual, "hello world")
+		})
+		It("adds a /apifaker prefix for internal routes", func() {
+			response := httpmock.GET("/fake_api/users/2", nil)
+			Expect(response, shouldHasJsonResponse, usersFixture[1])
+		})
 	})
 }

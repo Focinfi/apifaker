@@ -3,6 +3,9 @@ package apifaker
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+
+	"github.com/jinzhu/inflection"
+	"sort"
 	"strconv"
 )
 
@@ -83,6 +86,89 @@ func (li *LineItem) SetStringValue(key, value, valueType string) error {
 	return nil
 }
 
+//------LineItem Related Data------//
+// InsertRelatedData
+func (li LineItem) InsertRelatedData(model *Model) (LineItem, error) {
+	// has one relationship
+	newLi := NewLineItemWithMap(li.ToMap())
+	singularName := inflection.Singular(model.Name)
+	for _, resName := range model.HasOne {
+		resStruct := map[string]interface{}{}
+		if resRouter, ok := model.router.apiFaker.Routers[inflection.Plural(resName)]; !ok {
+			return newLi, HasOneErrorf("has no resource %s, file: %s", resName, model.router.filePath)
+		} else {
+			resLis := resRouter.Model.ToLineItems()
+			sort.Sort(resLis)
+			for _, resLi := range resLis {
+				curId, ok := resLi.Get(fmt.Sprintf("%s_id", singularName))
+				if ok && curId == newLi.Id() {
+					resStruct = resLi.ToMap()
+					break
+				}
+			}
+		}
+		if len(resStruct) > 0 {
+			newLi.Set(inflection.Singular(resName), resStruct)
+		}
+	}
+
+	// has many
+	for _, resName := range model.HasMany {
+		resSlice := []interface{}{}
+		if resRouter, ok := model.router.apiFaker.Routers[resName]; !ok {
+			return newLi, HasManyErrorf("has no resource %s, file", resName, model.router.filePath)
+		} else {
+			resLis := resRouter.Model.ToLineItems()
+			sort.Sort(resLis)
+			for _, resLi := range resLis {
+				curId, ok := resLi.Get(fmt.Sprintf("%s_id", singularName))
+				if ok && curId == newLi.Id() {
+					resSlice = append(resSlice, resLi.ToMap())
+				}
+			}
+		}
+		if len(resSlice) > 0 {
+			newLi.Set(resName, resSlice)
+		}
+	}
+
+	// if name, ok := li.Get("name"); ok && name == "Frank" {
+	// 	fmt.Printf("Old Li %v\n Inserted Li %v\n\n", li, newLi)
+	// }
+
+	return newLi, nil
+}
+
+// DeleteRelatedLis
+func (li LineItem) DeleteRelatedLis(id float64, model *Model) {
+	_, ok := model.Get(id)
+	if !ok {
+		return
+	}
+
+	for _, rotuer := range model.router.apiFaker.Routers {
+		var isRelatedRouter bool
+		var foreign_key = fmt.Sprintf("%s_id", inflection.Singular(model.Name))
+		for _, column := range rotuer.Model.Columns {
+			if column.Name == foreign_key {
+				isRelatedRouter = true
+				break
+			}
+		}
+
+		if isRelatedRouter {
+			for _, li := range rotuer.Model.ToLineItems() {
+				key, ok := li.Get(foreign_key)
+				if ok && key == id {
+					rotuer.Model.Delete(li.Id())
+				}
+			}
+		}
+	}
+}
+
+//------End LineItem Related Data------//
+
 // FormatValue format the given string value described by the given valueType
 func FormatValue(valueType, value string) (interface{}, error) {
 	var nilValue interface{}
@@ -106,7 +192,11 @@ func FormatValue(valueType, value string) (interface{}, error) {
 
 // ToMap returns dataMap in LineItem
 func (li LineItem) ToMap() map[string]interface{} {
-	return li.dataMap
+	newMap := map[string]interface{}{}
+	for k, v := range li.dataMap {
+		newMap[k] = v
+	}
+	return newMap
 }
 
 type LineItems []LineItem

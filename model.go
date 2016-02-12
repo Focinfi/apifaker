@@ -2,7 +2,7 @@ package apifaker
 
 import (
 	"encoding/json"
-	"fmt"
+
 	"github.com/Focinfi/gset"
 	"github.com/Focinfi/gtester"
 	"github.com/gin-gonic/gin"
@@ -70,9 +70,9 @@ func NewModelWithPath(path string, router *Router) (*Model, error) {
 		err = gtester.NewCheckQueue().Add(func() error {
 			return model.CheckRelationshipsMeta()
 		}).Add(func() error {
-			return model.checkColumnsMeta()
+			return model.CheckColumnsMeta()
 		}).Add(func() error {
-			return model.checkSeedsBasic()
+			return model.CheckSeedsBasic()
 		}).Run()
 
 		// set items from seeds for later relationships validation
@@ -127,7 +127,7 @@ func (model *Model) Add(li LineItem) error {
 		li.Set("id", model.nextId())
 	}
 
-	if err := model.checkSeed(li.ToMap()); err != nil {
+	if err := model.CheckSeed(li.ToMap()); err != nil {
 		return err
 	} else {
 		model.Set.Add(li)
@@ -152,7 +152,7 @@ func (model *Model) Update(id float64, li *LineItem) error {
 		li.Set("id", id)
 	}
 
-	if err := model.checkSeed(li.dataMap); err != nil {
+	if err := model.CheckSeed(li.dataMap); err != nil {
 		return err
 	} else {
 		model.Set.Add(*li)
@@ -175,7 +175,7 @@ func (model *Model) Delete(id float64) {
 		return
 	}
 
-	model.DeleteRelatedLis(id)
+	li.DeleteRelatedLis(id, model)
 	model.Set.Remove(gset.T(id))
 	model.dataChanged = true
 	model.removeUniqueValues(li)
@@ -240,84 +240,6 @@ func (model *Model) removeUniqueValues(lis ...LineItem) {
 
 //------End Columns Uniqueness------//
 
-//------LineItem Related Data------//
-// InsertRelatedData
-func (model *Model) InsertRelatedData(li *LineItem) error {
-	// has one relationship
-	singularName := inflection.Singular(model.Name)
-	for _, resName := range model.HasOne {
-		resStruct := map[string]interface{}{}
-		if resRouter, ok := model.router.apiFaker.Routers[inflection.Plural(resName)]; !ok {
-			return HasOneErrorf("has no resource %s, file: %s", resName, model.router.filePath)
-		} else {
-			resLis := resRouter.Model.ToLineItems()
-			sort.Sort(resLis)
-			for _, resLi := range resLis {
-				curId, ok := resLi.Get(fmt.Sprintf("%s_id", singularName))
-				if ok && curId == li.Id() {
-					resStruct = resLi.ToMap()
-					break
-				}
-			}
-		}
-		if len(resStruct) > 0 {
-			li.Set(inflection.Singular(resName), resStruct)
-		}
-	}
-
-	// has many
-	for _, resName := range model.HasMany {
-		resSlice := []interface{}{}
-		if resRouter, ok := model.router.apiFaker.Routers[resName]; !ok {
-			return HasManyErrorf("has no resource %s, file", resName, model.router.filePath)
-		} else {
-			resLis := resRouter.Model.ToLineItems()
-			sort.Sort(resLis)
-			for _, resLi := range resLis {
-				curId, ok := resLi.Get(fmt.Sprintf("%s_id", singularName))
-				if ok && curId == li.Id() {
-					resSlice = append(resSlice, resLi.ToMap())
-				}
-			}
-		}
-		if len(resSlice) > 0 {
-			li.Set(resName, resSlice)
-		}
-	}
-
-	return nil
-}
-
-// DeleteRelatedLis
-func (model *Model) DeleteRelatedLis(id float64) {
-	_, ok := model.Get(id)
-	if !ok {
-		return
-	}
-
-	for _, rotuer := range model.router.apiFaker.Routers {
-		var isRelatedRouter bool
-		var foreign_key = fmt.Sprintf("%s_id", inflection.Singular(model.Name))
-		for _, column := range rotuer.Model.Columns {
-			if column.Name == foreign_key {
-				isRelatedRouter = true
-				break
-			}
-		}
-
-		if isRelatedRouter {
-			for _, li := range rotuer.Model.ToLineItems() {
-				key, ok := li.Get(foreign_key)
-				if ok && key == id {
-					rotuer.Model.Delete(li.Id())
-				}
-			}
-		}
-	}
-}
-
-//------End LineItem Related Data------//
-
 //------Check------//
 // CheckRelationshipsMeta
 func (model *Model) CheckRelationshipsMeta() error {
@@ -340,7 +262,7 @@ func (model *Model) CheckRelationshipsMeta() error {
 }
 
 // checkColumnsMeta
-func (model *Model) checkColumnsMeta() error {
+func (model *Model) CheckColumnsMeta() error {
 	if len(model.Columns) < 1 ||
 		model.Columns[0].Name != "id" ||
 		model.Columns[0].Type != number.Name() {
@@ -366,7 +288,7 @@ func (model *Model) CheckRelationship(seed map[string]interface{}) error {
 	}
 	for _, resoureName := range model.HasMany {
 		if _, ok := model.router.apiFaker.Routers[inflection.Plural(resoureName)]; !ok {
-			return HasOneErrorf("use unknown reource \"%s\" in file: %s", resoureName, model.router.filePath)
+			return HasManyErrorf("use unknown reource \"%s\" in file: %s", resoureName, model.router.filePath)
 		}
 
 	}
@@ -391,7 +313,7 @@ func (model *Model) CheckRelationships() error {
 }
 
 // checkSeed check specific seed
-func (model *Model) checkSeedBasic(seed map[string]interface{}) error {
+func (model *Model) CheckSeedBasic(seed map[string]interface{}) error {
 	columns := model.Columns
 
 	if len(seed) != len(columns) {
@@ -412,9 +334,9 @@ func (model *Model) checkSeedBasic(seed map[string]interface{}) error {
 }
 
 // checkSeedsBasic
-func (model *Model) checkSeedsBasic() error {
+func (model *Model) CheckSeedsBasic() error {
 	for _, seed := range model.Seeds {
-		if err := model.checkSeedBasic(seed); err != nil {
+		if err := model.CheckSeedBasic(seed); err != nil {
 			return err
 		}
 	}
@@ -423,19 +345,19 @@ func (model *Model) checkSeedsBasic() error {
 }
 
 // checkSeed checkSeedBasic and CheckRelationships
-func (model *Model) checkSeed(seed map[string]interface{}) error {
+func (model *Model) CheckSeed(seed map[string]interface{}) error {
 	return gtester.NewCheckQueue().Add(func() error {
-		return model.checkSeedBasic(seed)
+		return model.CheckSeedBasic(seed)
 	}).Add(func() error {
 		return model.CheckRelationship(seed)
 	}).Run()
 }
 
-// checkSeeds() check if every item of this Model object's Seeds
+// checkSeeds() Check if every item of this Model object's Seeds
 // is in line of description of its Columns.
-func (model *Model) checkSeeds() error {
+func (model *Model) CheckSeeds() error {
 	for _, seed := range model.Seeds {
-		if err := model.checkSeed(seed); err != nil {
+		if err := model.CheckSeed(seed); err != nil {
 			return err
 		}
 	}
@@ -491,13 +413,13 @@ func (model *Model) backfillSeeds() {
 
 // ToLineItems allocate a new LineItems filled with
 // Model elements slice
-func (model Model) ToLineItems() LineItems {
+func (model *Model) ToLineItems() LineItems {
 	lis := []LineItem{}
 	elements := model.Set.ToSlice()
 	for _, element := range elements {
 		if li, ok := element.(LineItem); ok {
-			model.InsertRelatedData(&li)
-			lis = append(lis[:], li)
+			newLi, _ := li.InsertRelatedData(model)
+			lis = append(lis[:], newLi)
 		}
 	}
 	return LineItems(lis)

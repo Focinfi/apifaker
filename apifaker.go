@@ -168,8 +168,8 @@ func (af *ApiFaker) setHandlers() {
 					if id, ok := ctx.Get("idFloat64"); ok {
 						// GET /collection/:id
 						li, _ := model.Get(id.(float64))
-						model.InsertRelatedData(&li)
-						ctx.JSON(http.StatusOK, li.ToMap())
+						newLi, _ := li.InsertRelatedData(model)
+						ctx.JSON(http.StatusOK, newLi.ToMap())
 					} else {
 						// GET /collection
 						models := model.ToLineItems()
