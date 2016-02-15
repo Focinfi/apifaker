@@ -2,7 +2,6 @@ package apifaker
 
 import (
 	"encoding/json"
-
 	"github.com/Focinfi/gset"
 	"github.com/Focinfi/gtester"
 	"github.com/gin-gonic/gin"
@@ -135,7 +134,8 @@ func (model *Model) Add(li LineItem) error {
 
 // Update updates the LineItem with the given id by the given LineItem
 func (model *Model) Update(id float64, li *LineItem) error {
-	if !model.Has(id) {
+	oldLi, ok := model.Get(id)
+	if !ok {
 		return SeedsErrorf("model %s[id:%d] does not exsit", model.Name, id)
 	}
 
@@ -152,7 +152,7 @@ func (model *Model) Update(id float64, li *LineItem) error {
 	} else {
 		model.Set.Add(*li)
 		model.dataChanged = true
-		model.removeUniqueValues(*li)
+		model.removeUniqueValues(oldLi)
 		model.addUniqueValues(*li)
 	}
 
@@ -202,7 +202,10 @@ func (model *Model) UpdateWithAttrs(id float64, ctx *gin.Context) (LineItem, err
 		if err != nil {
 			return li, err
 		} else {
+			oldValue, _ := li.Get(column.Name)
+			column.RemoveUniquenessOf(oldValue)
 			li.Set(column.Name, formatVal)
+			column.AddUniquenessOf(formatVal)
 		}
 	}
 	return li, nil

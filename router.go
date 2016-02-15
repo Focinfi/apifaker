@@ -15,7 +15,7 @@ const (
 )
 
 type Route struct {
-	// Method request method only support GET, POST, PUT, PATCH, DELETE
+	// Method request method only supports GET, POST, PUT, PATCH, DELETE
 	Method RestMethod
 
 	// Path

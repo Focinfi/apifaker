@@ -44,6 +44,32 @@ func TestModel(t *testing.T) {
 		})
 	})
 
+	Describ("Uniqueness", t, func() {
+		Describ("Add uniqueness", func() {
+			model := validBookModel()
+			li, _ := model.Get(float64(1))
+			titleColumn := model.Columns[1]
+			name, _ := li.Get("title")
+			It("returns error", func() {
+				Expect(titleColumn.CheckValue(name, model), ShouldNotBeNil)
+			})
+		})
+
+		Describ("Delete uniqueness", func() {
+			model := validBookModel()
+			li, _ := model.Get(float64(1))
+			titleColumn := model.Columns[1]
+			oldName, _ := li.Get("title")
+			newLi := NewLineItemWithMap(li.ToMap())
+			newLi.Set("title", "XXX")
+			model.Update(float64(1), &newLi)
+			It("returns nil error", func() {
+				t.Log(titleColumn.uniqueValues.ToMap())
+				Expect(titleColumn.CheckValue(oldName, model), ShouldBeNil)
+			})
+		})
+	})
+
 	Describ("CheckRelationshipsMeta", t, func() {
 		model := validUserModel()
 		model.HasMany = append(model.HasMany, model.HasMany...)
@@ -83,7 +109,7 @@ func TestModel(t *testing.T) {
 		})
 	})
 
-	Describ("checkSeeds", t, func() {
+	Describ("checkSeedsValue", t, func() {
 		Context("when has wrong columns count", func() {
 			It("returns error", func() {
 				model := validUserModel()
