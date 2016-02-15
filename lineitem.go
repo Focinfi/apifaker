@@ -19,13 +19,13 @@ func NewLineItemWithMap(dataMap map[string]interface{}) LineItem {
 	return LineItem{dataMap}
 }
 
-// NewLineItemWithGinContext allocates and return a new LineItem,
-// its keys are from Model.Cloumns, values ara from gin.Contex.PostForm(),
-// error will be not nil if gin.Contex.PostForm() has not value for any key
+// NewLineItemWithGinContext allocates and returns a new LineItem,
+// its keys are from Model.Cloumns, values are from gin.Contex.PostForm(),
+// error will be not nil if gin.Contex.PostForm() has no value for any key
 func NewLineItemWithGinContext(ctx *gin.Context, model *Model) (LineItem, error) {
 	li := LineItem{make(map[string]interface{})}
 	for _, column := range model.Columns {
-		// skip id
+		// skip id column
 		if column.Name == "id" {
 			continue
 		}
@@ -39,13 +39,13 @@ func NewLineItemWithGinContext(ctx *gin.Context, model *Model) (LineItem, error)
 	return li, nil
 }
 
-// Id just call Element()
+// Id returns the float64 of id
 func (li *LineItem) Id() float64 {
 	return li.Element().(float64)
 }
 
 // Element returns the value of LineItem's dataMap["id"]
-// it will panic if got a nil or no-int "id"
+// it will panic if got a nil or a not float64 "id"
 func (li LineItem) Element() interface{} {
 	if id, ok := li.Get("id"); ok {
 		if idFloat64, ok := id.(float64); ok {
@@ -63,7 +63,7 @@ func (li LineItem) Len() int {
 	return len(li.dataMap)
 }
 
-// Get get dataMap[key] and returns its value and exsiting in LinItem
+// Get gets dataMap[key] and returns its value and exsiting in LinItem
 func (li LineItem) Get(key string) (interface{}, bool) {
 	value, ok := li.dataMap[key]
 	return value, ok
@@ -74,8 +74,8 @@ func (li *LineItem) Set(key string, value interface{}) {
 	li.dataMap[key] = value
 }
 
-// SetStringValue format the given string value with given valueType,
-// set key into LineItem formated value, returns no-nil error while formating
+// SetStringValue formats the given string value with given valueType,
+// sets key into LineItem formated value
 func (li *LineItem) SetStringValue(key, value, valueType string) error {
 	formatValue, err := FormatValue(valueType, value)
 	if err != nil {
@@ -86,17 +86,17 @@ func (li *LineItem) SetStringValue(key, value, valueType string) error {
 	return nil
 }
 
-//------LineItem Related Data------//
-// InsertRelatedData
-func (li LineItem) InsertRelatedData(model *Model) (LineItem, error) {
+// InsertRelatedData allocates and returns a new LineItem,
+// it will has all data of the caller LineItem,
+// it will insert all related data if the given Model's has any Column named xxx_id
+func (li LineItem) InsertRelatedData(model *Model) LineItem {
 	// has one relationship
 	newLi := NewLineItemWithMap(li.ToMap())
 	singularName := inflection.Singular(model.Name)
+	// HasOne
 	for _, resName := range model.HasOne {
 		resStruct := map[string]interface{}{}
-		if resRouter, ok := model.router.apiFaker.Routers[inflection.Plural(resName)]; !ok {
-			return newLi, HasOneErrorf("has no resource %s, file: %s", resName, model.router.filePath)
-		} else {
+		if resRouter, ok := model.router.apiFaker.Routers[inflection.Plural(resName)]; ok {
 			resLis := resRouter.Model.ToLineItems()
 			sort.Sort(resLis)
 			for _, resLi := range resLis {
@@ -112,12 +112,10 @@ func (li LineItem) InsertRelatedData(model *Model) (LineItem, error) {
 		}
 	}
 
-	// has many
+	// HasMany
 	for _, resName := range model.HasMany {
 		resSlice := []interface{}{}
-		if resRouter, ok := model.router.apiFaker.Routers[resName]; !ok {
-			return newLi, HasManyErrorf("has no resource %s, file", resName, model.router.filePath)
-		} else {
+		if resRouter, ok := model.router.apiFaker.Routers[resName]; ok {
 			resLis := resRouter.Model.ToLineItems()
 			sort.Sort(resLis)
 			for _, resLi := range resLis {
@@ -132,14 +130,10 @@ func (li LineItem) InsertRelatedData(model *Model) (LineItem, error) {
 		}
 	}
 
-	// if name, ok := li.Get("name"); ok && name == "Frank" {
-	// 	fmt.Printf("Old Li %v\n Inserted Li %v\n\n", li, newLi)
-	// }
-
-	return newLi, nil
+	return newLi
 }
 
-// DeleteRelatedLis
+// DeleteRelatedLis deletes all related data
 func (li LineItem) DeleteRelatedLis(id float64, model *Model) {
 	_, ok := model.Get(id)
 	if !ok {
@@ -167,8 +161,6 @@ func (li LineItem) DeleteRelatedLis(id float64, model *Model) {
 	}
 }
 
-//------End LineItem Related Data------//
-
 // FormatValue format the given string value described by the given valueType
 func FormatValue(valueType, value string) (interface{}, error) {
 	var nilValue interface{}
@@ -190,7 +182,7 @@ func FormatValue(valueType, value string) (interface{}, error) {
 	}
 }
 
-// ToMap returns dataMap in LineItem
+// ToMap allocates and returns a new map[string]interface{} filled with LineItem's dataMap
 func (li LineItem) ToMap() map[string]interface{} {
 	newMap := map[string]interface{}{}
 	for k, v := range li.dataMap {
@@ -202,7 +194,6 @@ func (li LineItem) ToMap() map[string]interface{} {
 type LineItems []LineItem
 
 // NewLineItemsFromInterfaces allocates and returns a new LineItems
-// using elements param as its content
 func NewLineItemsFromInterfaces(elements []interface{}) LineItems {
 	lis := []LineItem{}
 	for _, element := range elements {
@@ -223,14 +214,14 @@ func (lis LineItems) Less(i, j int) bool {
 	return lis[i].Id() < lis[j].Id()
 }
 
-// Swap swap two LineItem
+// Swap swaps two LineItem
 func (lis LineItems) Swap(i, j int) {
 	tmpItem := lis[i]
 	lis[i] = lis[j]
 	lis[j] = tmpItem
 }
 
-// ToSlice return a []map[string]interface{} filled with LineItems' content
+// ToSlice return a []map[string]interface{} filled with LineItems' elements
 func (lis LineItems) ToSlice() []map[string]interface{} {
 	slice := []map[string]interface{}{}
 	for _, li := range lis {

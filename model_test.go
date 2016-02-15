@@ -34,7 +34,7 @@ func TestModel(t *testing.T) {
 	Describ("InsertRelatedData", t, func() {
 		model := validUserModel()
 		li, _ := model.Get(float64(1))
-		newLi, _ := li.InsertRelatedData(model)
+		newLi := li.InsertRelatedData(model)
 		_, hasbooks := newLi.Get("books")
 		_, hasAvatar := newLi.Get("avatar")
 		It("inserts books and avatar columns into li", func() {
@@ -88,7 +88,7 @@ func TestModel(t *testing.T) {
 			It("returns error", func() {
 				model := validUserModel()
 				delete(model.Seeds[0], "id")
-				Expect(model.CheckSeeds(), ShouldNotBeNil)
+				Expect(model.ValidateSeedsValue(), ShouldNotBeNil)
 			})
 		})
 		Context("when has wrong colum", func() {
@@ -96,28 +96,28 @@ func TestModel(t *testing.T) {
 				model := validUserModel()
 				delete(model.Seeds[0], "id")
 				model.Seeds[0]["xxx"] = true
-				Expect(model.CheckSeeds(), ShouldNotBeNil)
+				Expect(model.ValidateSeedsValue(), ShouldNotBeNil)
 			})
 		})
 		Context("when type is wrong", func() {
 			It("returns error", func() {
 				model := validUserModel()
 				model.Seeds[0]["name"] = 1010
-				Expect(model.CheckSeeds(), ShouldNotBeNil)
+				Expect(model.ValidateSeedsValue(), ShouldNotBeNil)
 			})
 		})
 		Context("when doesn't much regexp pattern", func() {
 			It("returns error", func() {
 				model := validUserModel()
 				model.Seeds[0]["name"] = "~.~"
-				Expect(model.CheckSeeds(), ShouldNotBeNil)
+				Expect(model.ValidateSeedsValue(), ShouldNotBeNil)
 			})
 		})
 		Context("when column value has been existed", func() {
 			It("returns error", func() {
 				model := validUserModel()
 				model.Seeds[0]["name"] = model.Seeds[1]["name"]
-				Expect(model.CheckSeeds(), ShouldNotBeNil)
+				Expect(model.ValidateSeedsValue(), ShouldNotBeNil)
 			})
 		})
 		Context("when column has a inexistent foreign key", func() {
@@ -125,7 +125,7 @@ func TestModel(t *testing.T) {
 				model := validBookModel()
 				model.Seeds[0]["title"] = "On the way"
 				model.Seeds[0]["user_id"] = float64(100)
-				Expect(model.CheckSeeds(), ShouldNotBeNil)
+				Expect(model.ValidateSeedsValue(), ShouldNotBeNil)
 			})
 		})
 	})

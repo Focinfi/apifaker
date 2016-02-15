@@ -14,26 +14,27 @@ import (
 )
 
 type ApiFaker struct {
-	// Engine composing pointer of gin.Engine to let ApiFaker
-	// has the ability of routing
+	// Engine in charge of serving http requests
 	*gin.Engine
 
 	// ApiDir the directory contains api json files
 	ApiDir string
 
-	// Routers a array of pointer for Router
+	// Routers contains all routes use their name as the key
 	Routers map[string]*Router
 
-	// ExtMux external mux for the real api
+	// ExtMux the external mux for the real api
 	ExtMux http.Handler
 
 	// Prefix the prefix of fake apis
 	Prefix string
 }
 
-// NewWithApiDir create a new ApiFaker with the ApiDir,
-// returns the pointer of ApiFaker and error will not be nil if
-// there are some errors of manipulating ApiDir or json.Unmarshal
+// NewWithApiDir alloactes and returns a new ApiFaker with the given dir as its ApiDir,
+// the error will not be nil if
+//   1. dir is wrong
+//   2. json file format is wrong
+//   3. break rules described in README.md
 func NewWithApiDir(dir string) (*ApiFaker, error) {
 	faker := &ApiFaker{
 		ApiDir:  dir,
@@ -41,7 +42,6 @@ func NewWithApiDir(dir string) (*ApiFaker, error) {
 	}
 
 	err := gtester.NewCheckQueue().Add(func() error {
-		// traverse dir
 		return filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
 			if f == nil {
 				return err
@@ -95,9 +95,9 @@ func (af *ApiFaker) CheckRelationships() error {
 	return nil
 }
 
-// ServeHTTP serve the req and write response to rw.
-// It will use gin.Engine when req.URL.Path hasing prefix of af.Prefix
-// otherwise it will call af.ExtMux.ServeHTTP()
+// ServeHTTP implements the http.Handler.
+// It will use Engine when req.URL.Path hasing prefix of Prefix or ExtMux is nil
+// otherwise it will call ApiFaker.ExtMux.ServeHTTP()
 func (af *ApiFaker) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	path := req.URL.Path
 	if af.Prefix == "" || strings.HasPrefix(path, af.Prefix+"/") || af.ExtMux == nil {
@@ -107,13 +107,13 @@ func (af *ApiFaker) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
-// MountTo assign path as af's Prefix and assign handler as af's ExtMux.
-// At same time set hte handlers for af
+// MountTo assign path as ApiFaker's Prefix and reset the handlers
 func (af *ApiFaker) MountTo(path string) {
 	af.Prefix = path
 	af.setHandlers()
 }
 
+// IntegrateHandler set ApiFaker's ExtMux
 func (af *ApiFaker) IntegrateHandler(handler http.Handler) {
 	af.ExtMux = handler
 }
@@ -125,7 +125,7 @@ func (af *ApiFaker) SaveToFile() {
 	}
 }
 
-// setSaveToFileTimer set a periodic timer to call SaveToFile()
+// setSaveToFileTimer set a timer to call SaveToFile() once a day
 func (af *ApiFaker) setSaveToFileTimer() {
 	go func() {
 		for {
@@ -143,10 +143,9 @@ func (af *ApiFaker) setSaveToFileTimer() {
 	}()
 }
 
-// setHandlers set all handlers into af.Engine.
-// It will panic when there are has repeat combination of route.Method and route.Path
+// setHandlers set all handlers into ApiFaker.Engine.
 func (af *ApiFaker) setHandlers() {
-	// if any panic exsits, Save data to json
+	// if panic, backfill data to json files
 	defer func() {
 		if err := recover(); err != nil {
 			log.Fatal(err)
@@ -168,7 +167,7 @@ func (af *ApiFaker) setHandlers() {
 					if id, ok := ctx.Get("idFloat64"); ok {
 						// GET /collection/:id
 						li, _ := model.Get(id.(float64))
-						newLi, _ := li.InsertRelatedData(model)
+						newLi := li.InsertRelatedData(model)
 						ctx.JSON(http.StatusOK, newLi.ToMap())
 					} else {
 						// GET /collection
@@ -232,6 +231,9 @@ func (af *ApiFaker) setHandlers() {
 	}
 }
 
+// NewGinEngineWithFaker allocate and returns a new gin.Engine pointer,
+// added a new middleware which will check the type id param and the resource existence,
+// if ok, set the float64 value of id named idFloat64, otherwise response 404 or 400.
 func NewGinEngineWithFaker(faker *ApiFaker) *gin.Engine {
 	engine := gin.Default()
 	gin.SetMode(gin.ReleaseMode)
@@ -254,7 +256,6 @@ func NewGinEngineWithFaker(faker *ApiFaker) *gin.Engine {
 		pathPieces := strings.Split(path, "/")
 		resourceName := pathPieces[len(pathPieces)-2]
 
-		// check if element does exsit
 		if router, ok := faker.Routers[resourceName]; ok {
 			if _, ok := router.Model.Get(id); ok {
 				ctx.Set("idFloat64", id)

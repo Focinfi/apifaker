@@ -19,11 +19,12 @@ const (
 	object  JsonType = "object"
 )
 
-// Name return JsonType string itself
+// Name returns JsonType string itself
 func (j JsonType) Name() interface{} {
 	return string(j)
 }
 
+// GoType returns the corresponding type in golang
 func (j JsonType) GoType() string {
 	switch j {
 	case boolean:
@@ -40,7 +41,7 @@ func (j JsonType) GoType() string {
 	return "nil"
 }
 
-// jsonTypes contains a list a supportted supportted
+// jsonTypes contains a list a supportted json types
 var jsonTypes = NewSetSimple(boolean, number, str, array, object)
 
 type Column struct {
@@ -51,7 +52,10 @@ type Column struct {
 	uniqueValues  *SetThreadSafe `json:"-"`
 }
 
-// CheckType check type if is in the jsonTypes
+// CheckType checks
+//   1. Name and Type must be present
+//	 2. Type must in jsonTypes
+//   3. RegexpPattern must valid
 func (column Column) CheckMeta() error {
 	if column.Name == "" {
 		return ColumnsErrorf("colmun[content=%v] must has a name", column)
@@ -62,12 +66,10 @@ func (column Column) CheckMeta() error {
 		return ColumnsErrorf("%s must has a type", columnLogName)
 	}
 
-	// type must be in jsonTypes
 	if !jsonTypes.Has(JsonType(column.Type)) {
 		return ColumnsErrorf("%s use unsupportted type: %s, all supportted types: %v", columnLogName, column.Type, jsonTypes.ToSlice())
 	}
 
-	// check regexp format
 	if column.RegexpPattern != "" {
 		if _, err := regexp.Compile(column.RegexpPattern); err != nil {
 			return ColumnsErrorf("%s has wrong regexp pattern format: %s, error: %v", columnLogName, column.RegexpPattern)
@@ -77,9 +79,8 @@ func (column Column) CheckMeta() error {
 	return nil
 }
 
-// CheckRelationships
+// CheckRelationships checks the if resource exists with the xxx_id
 func (column *Column) CheckRelationships(seedVal interface{}, model *Model) error {
-	// check foreign key
 	if !strings.HasSuffix(column.Name, "_id") {
 		return nil
 	}
@@ -102,9 +103,11 @@ func (column *Column) CheckRelationships(seedVal interface{}, model *Model) erro
 	return ColumnsErrorf("%s has no item[id=%v] of resource[resource_name=\"%s\"]", columnLogName, seedVal, resPluralName)
 }
 
-// CheckValue
+// CheckValue checks the value to insert database
+//   1. type
+//   2. regexp pattern matching
+// 	 3. uniqueness if unique is true
 func (column *Column) CheckValue(seedVal interface{}, model *Model) error {
-	// check type
 	columnLogName := fmt.Sprintf("column[name=\"%s\"]", column.Name)
 	goType := JsonType(column.Type).GoType()
 	jsonType := JsonType(column.Type).Name()
@@ -113,7 +116,6 @@ func (column *Column) CheckValue(seedVal interface{}, model *Model) error {
 		return ColumnsErrorf("%s has wrong type, expect a %s, but use a %s", columnLogName, jsonType, seedType)
 	}
 
-	// check regexp pattern matching
 	if column.RegexpPattern != "" && column.Type == str.Name() {
 		matched, err := regexp.Match(column.RegexpPattern, []byte(seedVal.(string)))
 		if err != nil {
@@ -123,7 +125,6 @@ func (column *Column) CheckValue(seedVal interface{}, model *Model) error {
 		}
 	}
 
-	// check uniqueness
 	if !column.CheckUniquenessOf(seedVal) {
 		return ColumnsErrorf("%s item value %v already exists", columnLogName, seedVal)
 	}
@@ -131,7 +132,7 @@ func (column *Column) CheckValue(seedVal interface{}, model *Model) error {
 	return nil
 }
 
-// CheckUniqueOf check if the given value exists
+// CheckUniquenessOf checks if the given value exists
 func (column *Column) CheckUniquenessOf(value interface{}) bool {
 	if !column.Unique || column.Name == "id" {
 		return true

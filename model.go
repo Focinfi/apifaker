@@ -20,17 +20,17 @@ type Model struct {
 	Seeds   []map[string]interface{} `json:"seeds"`
 	Columns []*Column                `json:"columns"`
 
-	// relationship
+	// relationships
 	HasMany []string `json:"has_many"`
 	HasOne  []string `json:"has_one"`
 
 	// Set contains runtime data
 	Set *gset.SetThreadSafe `json:"-"`
 
-	// currentId record the number of times of adding
+	// currentId records the max of id
 	currentId float64 `json:"-"`
 
-	// dataChanged record the sign if this Model's Set have been changed
+	// dataChanged signs if differs between Set and Seeds
 	dataChanged  bool `json:"-"`
 	sync.RWMutex `json:"-"`
 	router       *Router `json:"-"`
@@ -57,58 +57,53 @@ func NewModelWithPath(path string, router *Router) (*Model, error) {
 	}
 	defer file.Close()
 
-	// read and unmarshal file
-	bytes, err := ioutil.ReadAll(file)
-	if err != nil {
-		return nil, err
-	}
 	model := NewModel(router)
-	if err = json.Unmarshal(bytes, model); err != nil {
-		err = JsonFileErrorf("format error: %v, file: %s", err, path)
-	} else {
-		// use CheckQueue to check columns and seeds
-		err = gtester.NewCheckQueue().Add(func() error {
-			return model.CheckRelationshipsMeta()
-		}).Add(func() error {
-			return model.CheckColumnsMeta()
-		}).Add(func() error {
-			return model.CheckSeedsBasic()
-		}).Run()
+	bytes := []byte{}
 
-		// set items from seeds for later relationships validation
-		if err == nil {
-			model.initSet()
-		}
+	err = gtester.NewCheckQueue().Add(func() error {
+		bytes, err = ioutil.ReadAll(file)
+		return err
+	}).Add(func() error {
+		return json.Unmarshal(bytes, model)
+	}).Add(func() error {
+		return model.CheckRelationshipsMeta()
+	}).Add(func() error {
+		return model.CheckColumnsMeta()
+	}).Add(func() error {
+		return model.ValidateSeedsValue()
+	}).Run()
+
+	if err == nil {
+		model.initSet()
 	}
 
 	return model, err
 }
 
-// updateId update currentId if the given id is bigger
+// updateId updates currentId if the given id is bigger
 func (model *Model) updateId(id float64) {
 	if id > model.currentId {
 		model.currentId = id
 	}
 }
 
-// nextId plus 1 to Model.currentId return return it
+// nextId pluses 1 to Model.currentId and returns it
 func (model *Model) nextId() float64 {
 	model.currentId++
 	return model.currentId
 }
 
-// Len return the length of Model's Set
+// Len returns the length of Model's Set
 func (model *Model) Len() int {
 	return model.Set.Len()
 }
 
-// Has return if m has LineItem with id param
+// Has returns if Model has LineItem with the given id
 func (model *Model) Has(id float64) bool {
 	return model.Set.Has(gset.T(id))
 }
 
-// Get get and return element with id param, also return
-// if it's not nil or a LineItem
+// Get gets and returns element with id param and the existence of it
 func (model Model) Get(id float64) (li LineItem, ok bool) {
 	var element interface{}
 	if element, ok = model.Set.Get(id); ok {
@@ -122,12 +117,12 @@ func (model *Model) Add(li LineItem) error {
 	model.Lock()
 	defer model.Unlock()
 
-	// set id
+	// set id if the given LineItem has no id
 	if _, ok := li.Get("id"); !ok {
 		li.Set("id", model.nextId())
 	}
 
-	if err := model.CheckSeed(li.ToMap()); err != nil {
+	if err := model.Validate(li.ToMap()); err != nil {
 		return err
 	} else {
 		model.Set.Add(li)
@@ -138,7 +133,7 @@ func (model *Model) Add(li LineItem) error {
 	return nil
 }
 
-// Update a LineItem in Model
+// Update updates the LineItem with the given id by the given LineItem
 func (model *Model) Update(id float64, li *LineItem) error {
 	if !model.Has(id) {
 		return SeedsErrorf("model %s[id:%d] does not exsit", model.Name, id)
@@ -147,12 +142,12 @@ func (model *Model) Update(id float64, li *LineItem) error {
 	model.Lock()
 	defer model.Unlock()
 
-	// set id
+	// set id if the given LineItem has no id
 	if _, ok := li.Get("id"); !ok {
 		li.Set("id", id)
 	}
 
-	if err := model.CheckSeed(li.dataMap); err != nil {
+	if err := model.Validate(li.dataMap); err != nil {
 		return err
 	} else {
 		model.Set.Add(*li)
@@ -164,7 +159,7 @@ func (model *Model) Update(id float64, li *LineItem) error {
 	return nil
 }
 
-// Delete
+// Delete deletes the LineItem and its related data with the given id
 func (model *Model) Delete(id float64) {
 	model.Lock()
 	defer model.Unlock()
@@ -181,9 +176,9 @@ func (model *Model) Delete(id float64) {
 	model.removeUniqueValues(li)
 }
 
-// UpdateWithAttrsInGinContext find a LineItem with id param,
-// update it with attrs from gin.Contex.PostForm(),
-// returns status in net/http package and object for response
+// UpdateWithAttrsInGinContext finds a LineItem with id param,
+// updates it with attrs from gin.Contex.PostForm(),
+// returns the edited LineItem
 func (model *Model) UpdateWithAttrs(id float64, ctx *gin.Context) (LineItem, error) {
 	// check if element does exsit
 	li, ok := model.Get(id)
@@ -216,7 +211,7 @@ func (model *Model) UpdateWithAttrs(id float64, ctx *gin.Context) (LineItem, err
 //------End Model CURD------//
 
 //------Columns Uniqueness------//
-// addUniqueValues add values of Lineitem into corresponding Column's uniqueValues
+// addUniqueValues adds values of the Lineitem into corresponding Column's uniqueValues
 func (model *Model) addUniqueValues(lis ...LineItem) {
 	for _, li := range lis {
 		for _, column := range model.Columns {
@@ -227,7 +222,7 @@ func (model *Model) addUniqueValues(lis ...LineItem) {
 	}
 }
 
-// removeUniqueValues reomve values of Lineitem into corresponding Column's uniqueValues
+// removeUniqueValues reomves values of Lineitem into corresponding Column's uniqueValues
 func (model *Model) removeUniqueValues(lis ...LineItem) {
 	for _, li := range lis {
 		for _, column := range model.Columns {
@@ -241,7 +236,7 @@ func (model *Model) removeUniqueValues(lis ...LineItem) {
 //------End Columns Uniqueness------//
 
 //------Check------//
-// CheckRelationshipsMeta
+// CheckRelationshipsMeta check the uniqueness of every element in HasOne and HasMany
 func (model *Model) CheckRelationshipsMeta() error {
 	set := gset.NewSetSimple()
 	for _, resName := range model.HasMany {
@@ -261,7 +256,9 @@ func (model *Model) CheckRelationshipsMeta() error {
 	return nil
 }
 
-// checkColumnsMeta
+// checkColumnsMeta checks columns:
+//   1. id must be the first column, its type must be number
+// 	 2. CheckMeta
 func (model *Model) CheckColumnsMeta() error {
 	if len(model.Columns) < 1 ||
 		model.Columns[0].Name != "id" ||
@@ -279,6 +276,8 @@ func (model *Model) CheckColumnsMeta() error {
 }
 
 // CheckRelationship
+//   1. checks if every resource in HasOne and HasMany exists
+//   2. CheckRelationships
 func (model *Model) CheckRelationship(seed map[string]interface{}) error {
 	for _, resoureName := range model.HasOne {
 		if _, ok := model.router.apiFaker.Routers[inflection.Plural(resoureName)]; !ok {
@@ -312,8 +311,8 @@ func (model *Model) CheckRelationships() error {
 	return nil
 }
 
-// checkSeed check specific seed
-func (model *Model) CheckSeedBasic(seed map[string]interface{}) error {
+// ValidateValue checks specific seed
+func (model *Model) ValidateValue(seed map[string]interface{}) error {
 	columns := model.Columns
 
 	if len(seed) != len(columns) {
@@ -333,10 +332,10 @@ func (model *Model) CheckSeedBasic(seed map[string]interface{}) error {
 	return nil
 }
 
-// checkSeedsBasic
-func (model *Model) CheckSeedsBasic() error {
+// ValidateSeedsValue
+func (model *Model) ValidateSeedsValue() error {
 	for _, seed := range model.Seeds {
-		if err := model.CheckSeedBasic(seed); err != nil {
+		if err := model.ValidateValue(seed); err != nil {
 			return err
 		}
 	}
@@ -344,20 +343,19 @@ func (model *Model) CheckSeedsBasic() error {
 	return nil
 }
 
-// checkSeed checkSeedBasic and CheckRelationships
-func (model *Model) CheckSeed(seed map[string]interface{}) error {
+// Validate ValidateValue and CheckRelationships
+func (model *Model) Validate(seed map[string]interface{}) error {
 	return gtester.NewCheckQueue().Add(func() error {
-		return model.CheckSeedBasic(seed)
+		return model.ValidateValue(seed)
 	}).Add(func() error {
 		return model.CheckRelationship(seed)
 	}).Run()
 }
 
-// checkSeeds() Check if every item of this Model object's Seeds
-// is in line of description of its Columns.
-func (model *Model) CheckSeeds() error {
+// ValidateSeeds
+func (model *Model) ValidateSeeds() error {
 	for _, seed := range model.Seeds {
-		if err := model.CheckSeed(seed); err != nil {
+		if err := model.Validate(seed); err != nil {
 			return err
 		}
 	}
@@ -385,7 +383,7 @@ func (model *Model) CheckUniqueness() error {
 //------End Check------//
 
 //------Seeds and Set------//
-// setItems
+// initSet adds all LineItem into Set, addUniqueValues and updateId
 func (model *Model) initSet() {
 	if model.Set == nil {
 		model.Set = gset.NewSetThreadSafe()
@@ -398,7 +396,7 @@ func (model *Model) initSet() {
 	}
 }
 
-// SetToSeeds
+// backfillSeeds
 func (model *Model) backfillSeeds() {
 	model.RLock()
 	defer model.RUnlock()
@@ -411,14 +409,13 @@ func (model *Model) backfillSeeds() {
 
 //------End Seeds and Set------//
 
-// ToLineItems allocate a new LineItems filled with
-// Model elements slice
+// ToLineItems allocate a new LineItems filled with Model elements slice
 func (model *Model) ToLineItems() LineItems {
 	lis := []LineItem{}
 	elements := model.Set.ToSlice()
 	for _, element := range elements {
 		if li, ok := element.(LineItem); ok {
-			newLi, _ := li.InsertRelatedData(model)
+			newLi := li.InsertRelatedData(model)
 			lis = append(lis[:], newLi)
 		}
 	}
