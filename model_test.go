@@ -197,19 +197,19 @@ func TestModel(t *testing.T) {
 
 	Describ("SaveToFile", t, func() {
 		model := validUserModel()
-		model.Add(LineItem{map[string]interface{}{
+		err := model.Add(LineItem{map[string]interface{}{
 			"id":    float64(4),
 			"name":  "Monica",
 			"phone": "12332132132",
-			"age":   21,
+			"age":   float64(21),
 		}})
-		model.backfillSeeds()
-		It("set dataChange to be false", func() {
-			Expect(model.dataChanged, ShouldBeFalse)
+
+		It("set dataChanged to be true", func() {
+			Expect(model.dataChanged, ShouldBeTrue)
 		})
 
-		err := model.SaveToFile(testDir + "/users_temp.json")
-		defer os.Remove(testDir + "/users_temp.json")
+		err = model.SaveToFile(testDir + "/users_temp.json.test")
+		defer os.Remove(testDir + "/users_temp.json.test")
 		It("saves to file", func() {
 			Expect(err, ShouldBeNil)
 		})

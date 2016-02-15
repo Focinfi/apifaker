@@ -414,9 +414,6 @@ func (model *Model) ToLineItems() LineItems {
 
 // SaveToFile save model to file with the given path
 func (model *Model) SaveToFile(path string) error {
-	model.Lock()
-	defer model.Unlock()
-
 	file, err := os.Create(path)
 	if err != nil {
 		return err
