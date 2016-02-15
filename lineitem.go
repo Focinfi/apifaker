@@ -193,17 +193,6 @@ func (li LineItem) ToMap() map[string]interface{} {
 
 type LineItems []LineItem
 
-// NewLineItemsFromInterfaces allocates and returns a new LineItems
-func NewLineItemsFromInterfaces(elements []interface{}) LineItems {
-	lis := []LineItem{}
-	for _, element := range elements {
-		if li, ok := element.(LineItem); ok {
-			lis = append(lis[:], li)
-		}
-	}
-	return LineItems(lis)
-}
-
 // Len returns LineItems's length
 func (lis LineItems) Len() int {
 	return len(lis)

@@ -286,13 +286,11 @@ func (model *Model) CheckRelationship(seed map[string]interface{}) error {
 		if _, ok := model.router.apiFaker.Routers[inflection.Plural(resoureName)]; !ok {
 			return HasOneErrorf("use unknown reource %s in file: %s", resoureName, model.router.filePath)
 		}
-
 	}
 	for _, resoureName := range model.HasMany {
 		if _, ok := model.router.apiFaker.Routers[inflection.Plural(resoureName)]; !ok {
 			return HasManyErrorf("use unknown reource \"%s\" in file: %s", resoureName, model.router.filePath)
 		}
-
 	}
 
 	for _, column := range model.Columns {
@@ -353,17 +351,6 @@ func (model *Model) Validate(seed map[string]interface{}) error {
 	}).Add(func() error {
 		return model.CheckRelationship(seed)
 	}).Run()
-}
-
-// ValidateSeeds
-func (model *Model) ValidateSeeds() error {
-	for _, seed := range model.Seeds {
-		if err := model.Validate(seed); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // CheckUniqueness check uniqueness for initialization for ApiFaker
@@ -427,10 +414,6 @@ func (model *Model) ToLineItems() LineItems {
 
 // SaveToFile save model to file with the given path
 func (model *Model) SaveToFile(path string) error {
-	if !model.dataChanged {
-		return nil
-	}
-
 	model.Lock()
 	defer model.Unlock()
 
@@ -440,7 +423,9 @@ func (model *Model) SaveToFile(path string) error {
 	}
 	defer file.Close()
 
-	model.backfillSeeds()
+	if model.dataChanged {
+		model.backfillSeeds()
+	}
 	bytes, err := json.Marshal(model)
 	if err != nil {
 		return err

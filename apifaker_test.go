@@ -21,6 +21,8 @@ var userParam = map[string]interface{}{
 	"id": float64(4), "name": "Ameng", "phone": "13213213214", "age": float64(22),
 }
 
+var incompleteParam = map[string]interface{}{"name": "N"}
+
 var invalidUserParam = map[string]interface{}{
 	"name": "N", "phone": "13013213214", "age": "22x",
 }
@@ -102,6 +104,11 @@ func TestApiFaker(t *testing.T) {
 				It("returns 404", func() {
 					Expect(response.Code, ShouldEqual, http.StatusBadRequest)
 				})
+
+				response = httpmock.GET("/users/100", nil)
+				It("returns 400", func() {
+					Expect(response.Code, ShouldEqual, http.StatusNotFound)
+				})
 			})
 		})
 
@@ -125,6 +132,11 @@ func TestApiFaker(t *testing.T) {
 			Context("when pass invalid params", func() {
 				response, _ := httpmock.POSTForm("/users", invalidUserParam)
 				It("returns 404", func() {
+					Expect(response.Code, ShouldEqual, http.StatusBadRequest)
+				})
+
+				response, _ = httpmock.POSTForm("/users", incompleteParam)
+				It("returns 404, params is incomplete", func() {
 					Expect(response.Code, ShouldEqual, http.StatusBadRequest)
 				})
 			})
@@ -167,6 +179,11 @@ func TestApiFaker(t *testing.T) {
 			Context("when pass invalid params", func() {
 				response, _ := httpmock.PUT("/users/4", userEditedAttrPut)
 				It("returns 404", func() {
+					Expect(response.Code, ShouldEqual, http.StatusBadRequest)
+				})
+
+				response, _ = httpmock.PUT("/users/4", incompleteParam)
+				It("returns 404, params is incomplete", func() {
 					Expect(response.Code, ShouldEqual, http.StatusBadRequest)
 				})
 			})

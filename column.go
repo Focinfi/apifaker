@@ -52,6 +52,13 @@ type Column struct {
 	uniqueValues  *SetThreadSafe `json:"-"`
 }
 
+func (column *Column) getUniqueValues() *SetThreadSafe {
+	if column.uniqueValues == nil {
+		column.uniqueValues = NewSetThreadSafe()
+	}
+	return column.uniqueValues
+}
+
 // CheckType checks
 //   1. Name and Type must be present
 //	 2. Type must in jsonTypes
@@ -89,14 +96,12 @@ func (column *Column) CheckRelationships(seedVal interface{}, model *Model) erro
 	resName := strings.TrimSuffix(column.Name, "_id")
 	resPluralName := inflection.Plural(resName)
 	router, ok := model.router.apiFaker.Routers[resPluralName]
-	if !ok {
-		return ColumnsErrorf("%s has no resource[resoure_name=\"%s\"] %s in column: %v", columnLogName, resPluralName, column)
-	}
-
-	for _, li := range router.Model.ToLineItems() {
-		id, ok := li.Get("id")
-		if ok && id == seedVal {
-			return nil
+	if ok {
+		for _, li := range router.Model.ToLineItems() {
+			id, ok := li.Get("id")
+			if ok && id == seedVal {
+				return nil
+			}
 		}
 	}
 
@@ -118,9 +123,7 @@ func (column *Column) CheckValue(seedVal interface{}, model *Model) error {
 
 	if column.RegexpPattern != "" && column.Type == str.Name() {
 		matched, err := regexp.Match(column.RegexpPattern, []byte(seedVal.(string)))
-		if err != nil {
-			return ColumnsErrorf("%s has regexp format error, regexp: %s, error: %v", columnLogName, column.RegexpPattern, err)
-		} else if !matched {
+		if err == nil && !matched {
 			return fmt.Errorf("%s mismatch regexp format, value: %v, format: %s", columnLogName, seedVal, column.RegexpPattern)
 		}
 	}
@@ -138,12 +141,7 @@ func (column *Column) CheckUniquenessOf(value interface{}) bool {
 		return true
 	}
 
-	if column.uniqueValues == nil {
-		column.uniqueValues = NewSetThreadSafe()
-		return true
-	} else {
-		return !column.uniqueValues.Has(T(value))
-	}
+	return !column.getUniqueValues().Has(T(value))
 }
 
 // AddValue add the give value into the Column's uniqueValues
@@ -152,11 +150,7 @@ func (column *Column) AddUniquenessOf(value interface{}) {
 		return
 	}
 
-	if column.uniqueValues == nil {
-		column.uniqueValues = NewSetThreadSafe(T(value))
-	} else {
-		column.uniqueValues.Add(T(value))
-	}
+	column.getUniqueValues().Add(T(value))
 }
 
 // RemoveValue remove the given value from Column's uniqueValues
@@ -165,9 +159,5 @@ func (column *Column) RemoveUniquenessOf(value interface{}) {
 		return
 	}
 
-	if column.uniqueValues == nil {
-		column.uniqueValues = NewSetThreadSafe()
-	} else {
-		column.uniqueValues.Remove(T(value))
-	}
+	column.getUniqueValues().Remove(T(value))
 }

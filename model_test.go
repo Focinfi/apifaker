@@ -64,17 +64,42 @@ func TestModel(t *testing.T) {
 			newLi.Set("title", "XXX")
 			model.Update(float64(1), &newLi)
 			It("returns nil error", func() {
-				t.Log(titleColumn.uniqueValues.ToMap())
 				Expect(titleColumn.CheckValue(oldName, model), ShouldBeNil)
 			})
 		})
 	})
 
 	Describ("CheckRelationshipsMeta", t, func() {
-		model := validUserModel()
-		model.HasMany = append(model.HasMany, model.HasMany...)
-		It("returns error if has_many has repeated elements", func() {
-			Expect(model.CheckRelationshipsMeta(), ShouldNotBeNil)
+		Context("when has_many has repeated elements", func() {
+			model := validUserModel()
+			model.HasMany = append(model.HasMany, model.HasMany...)
+			It("returns error ", func() {
+				Expect(model.CheckRelationshipsMeta(), ShouldNotBeNil)
+			})
+		})
+		Context("when has_one has repeated elements", func() {
+			model := validUserModel()
+			model.HasOne = append(model.HasOne, model.HasMany...)
+			It("returns error ", func() {
+				Expect(model.CheckRelationshipsMeta(), ShouldNotBeNil)
+			})
+		})
+	})
+
+	Describ("CheckRelationships", t, func() {
+		Context("when has_one or has_many has unknown resources", func() {
+			model := validUserModel()
+			model.HasMany = append(model.HasMany, "foo")
+			It("returns error ", func() {
+				Expect(model.CheckRelationships(), ShouldNotBeNil)
+			})
+		})
+		Context("when has_one or has_one has unknown resources", func() {
+			model := validUserModel()
+			model.HasOne = append(model.HasOne, "foo")
+			It("returns error ", func() {
+				Expect(model.CheckRelationships(), ShouldNotBeNil)
+			})
 		})
 	})
 
@@ -86,17 +111,31 @@ func TestModel(t *testing.T) {
 				Expect(model.CheckColumnsMeta(), ShouldNotBeNil)
 			})
 		})
-		Context("when type is nil", func() {
+		Context("when id's type is nil", func() {
 			It("returns error", func() {
 				model := validUserModel()
 				model.Columns[0] = &Column{Name: "id"}
 				Expect(model.CheckColumnsMeta(), ShouldNotBeNil)
 			})
 		})
-		Context("when type is not supportted", func() {
+		Context("when name is nil", func() {
 			It("returns error", func() {
 				model := validUserModel()
-				model.Columns[0] = &Column{Name: "id", Type: "xxx"}
+				model.Columns[1].Name = ""
+				Expect(model.CheckColumnsMeta(), ShouldNotBeNil)
+			})
+		})
+		Context("when type is nil", func() {
+			It("returns error", func() {
+				model := validUserModel()
+				model.Columns[1].Type = ""
+				Expect(model.CheckColumnsMeta(), ShouldNotBeNil)
+			})
+		})
+		Context("when type is not in jsonTypes", func() {
+			It("returns error", func() {
+				model := validUserModel()
+				model.Columns[1].Type = "xxx"
 				Expect(model.CheckColumnsMeta(), ShouldNotBeNil)
 			})
 		})
@@ -109,7 +148,7 @@ func TestModel(t *testing.T) {
 		})
 	})
 
-	Describ("checkSeedsValue", t, func() {
+	Describ("ValidateSeedsValue", t, func() {
 		Context("when has wrong columns count", func() {
 			It("returns error", func() {
 				model := validUserModel()
@@ -151,7 +190,7 @@ func TestModel(t *testing.T) {
 				model := validBookModel()
 				model.Seeds[0]["title"] = "On the way"
 				model.Seeds[0]["user_id"] = float64(100)
-				Expect(model.ValidateSeedsValue(), ShouldNotBeNil)
+				Expect(model.Validate(model.Seeds[0]), ShouldNotBeNil)
 			})
 		})
 	})

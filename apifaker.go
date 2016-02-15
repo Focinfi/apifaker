@@ -264,9 +264,6 @@ func NewGinEngineWithFaker(faker *ApiFaker) *gin.Engine {
 				ctx.JSON(http.StatusNotFound, nil)
 				return
 			}
-		} else {
-			ctx.JSON(http.StatusNotFound, nil)
-			return
 		}
 	})
 
