@@ -27,12 +27,12 @@ type Model struct {
 	Set *gset.SetThreadSafe `json:"-"`
 
 	// currentId records the max of id
-	currentId float64 `json:"-"`
+	currentId float64
 
 	// dataChanged signs if differs between Set and Seeds
-	dataChanged  bool `json:"-"`
-	sync.RWMutex `json:"-"`
-	router       *Router `json:"-"`
+	dataChanged bool
+	sync.RWMutex
+	router *Router
 }
 
 //------Model CURD------//
@@ -103,7 +103,7 @@ func (model *Model) Has(id float64) bool {
 }
 
 // Get gets and returns element with id param and the existence of it
-func (model Model) Get(id float64) (li LineItem, ok bool) {
+func (model *Model) Get(id float64) (li LineItem, ok bool) {
 	var element interface{}
 	if element, ok = model.Set.Get(id); ok {
 		li, ok = element.(LineItem)

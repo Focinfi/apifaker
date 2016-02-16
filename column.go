@@ -45,11 +45,11 @@ func (j JsonType) GoType() string {
 var jsonTypes = NewSetSimple(boolean, number, str, array, object)
 
 type Column struct {
-	Name          string         `json:"name"`
-	Type          string         `json:"type"`
-	Unique        bool           `json:"unique"`
-	RegexpPattern string         `json:"regexp_pattern"`
-	uniqueValues  *SetThreadSafe `json:"-"`
+	Name          string `json:"name"`
+	Type          string `json:"type"`
+	Unique        bool   `json:"unique"`
+	RegexpPattern string `json:"regexp_pattern"`
+	uniqueValues  *SetThreadSafe
 }
 
 func (column *Column) getUniqueValues() *SetThreadSafe {
