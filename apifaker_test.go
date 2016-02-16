@@ -66,7 +66,7 @@ var usersFixture = []map[string]interface{}{
 func shouldHasJsonResponse(response interface{}, exp ...interface{}) string {
 	if record, ok := response.(*httpmock.Recorder); ok {
 		if !gtester.ResponseEqual(record, exp[0]) {
-			return fmt.Sprintf("Expect: '%v'\nActual: '%v\n", exp[0], record.Body)
+			return fmt.Sprintf("Expect: '%v'Actual: '%v", exp[0], record.Body)
 		}
 	} else {
 		panic("First parameter of shouldHasJsonResponse() must be '*httpmock.Recorder'")
@@ -92,14 +92,14 @@ func TestApiFaker(t *testing.T) {
 	httpmock.ListenAndServe("localhost", faker)
 	Describ("SetHandlers", t, func() {
 		Describ("GET /users/:id", func() {
-			Context("when pass a valid id\n", func() {
+			Context("when pass a valid id", func() {
 				response := httpmock.GET("/users/1", nil)
 				It("returns the first user", func() {
 					Expect(response, shouldHasJsonResponse, usersFixture[0])
 				})
 			})
 
-			Context("when pass a invalid id\n", func() {
+			Context("when pass a invalid id", func() {
 				response := httpmock.GET("/users/xxx", nil)
 				It("returns 404", func() {
 					Expect(response.Code, ShouldEqual, http.StatusBadRequest)

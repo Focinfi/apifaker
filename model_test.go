@@ -45,7 +45,7 @@ func TestModel(t *testing.T) {
 	})
 
 	Describ("Uniqueness", t, func() {
-		Describ("Add uniqueness", func() {
+		Context("when check a user name already exists", func() {
 			model := validBookModel()
 			li, _ := model.Get(float64(1))
 			titleColumn := model.Columns[1]
@@ -55,7 +55,7 @@ func TestModel(t *testing.T) {
 			})
 		})
 
-		Describ("Delete uniqueness", func() {
+		Context("when check a title which has been edited", func() {
 			model := validBookModel()
 			li, _ := model.Get(float64(1))
 			titleColumn := model.Columns[1]
@@ -103,7 +103,7 @@ func TestModel(t *testing.T) {
 		})
 	})
 
-	Describ("checkColumnsMeta", t, func() {
+	Describ("CheckColumnsMeta", t, func() {
 		Context("when first item is not id", func() {
 			It("returns error", func() {
 				model := validUserModel()
