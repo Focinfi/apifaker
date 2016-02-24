@@ -178,17 +178,15 @@ func (af *ApiFaker) setHandlers() {
 				})
 			case POST:
 				af.POST(path, func(ctx *gin.Context) {
-					// create a new lineitems with ctx.PostForm()
 					li, err := NewLineItemWithGinContext(ctx, model)
+					if err == nil {
+						err = model.Add(li)
+					}
+
 					if err != nil {
 						ctx.JSON(http.StatusBadRequest, ResponseErrorMsg(err))
 					} else {
-						// add this lineitem to model
-						if err = model.Add(li); err != nil {
-							ctx.JSON(http.StatusBadRequest, ResponseErrorMsg(err))
-						} else {
-							ctx.JSON(http.StatusOK, li.ToMap())
-						}
+						ctx.JSON(http.StatusOK, li.ToMap())
 					}
 				})
 			case PUT:
@@ -242,14 +240,12 @@ func NewGinEngineWithFaker(faker *ApiFaker) *gin.Engine {
 		// check if param "id" is int
 		idStr := ctx.Param("id")
 		if idStr == "" {
-			ctx.Next()
 			return
 		}
 
 		id, err := strconv.ParseFloat(idStr, 64)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, ResponseErrorMsg(err))
-			return
 		}
 
 		path := strings.TrimSuffix(ctx.Request.URL.Path, "/")
@@ -259,10 +255,8 @@ func NewGinEngineWithFaker(faker *ApiFaker) *gin.Engine {
 		if router, ok := faker.Routers[resourceName]; ok {
 			if _, ok := router.Model.Get(id); ok {
 				ctx.Set("idFloat64", id)
-				ctx.Next()
 			} else {
 				ctx.JSON(http.StatusNotFound, nil)
-				return
 			}
 		}
 	})
