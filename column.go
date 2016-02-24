@@ -61,7 +61,7 @@ func (column *Column) getUniqueValues() *SetThreadSafe {
 
 // CheckType checks
 //   1. Name and Type must be present
-//	 2. Type must in jsonTypes
+//   2. Type must in jsonTypes
 //   3. RegexpPattern must valid
 func (column Column) CheckMeta() error {
 	if column.Name == "" {
@@ -111,7 +111,7 @@ func (column *Column) CheckRelationships(seedVal interface{}, model *Model) erro
 // CheckValue checks the value to insert database
 //   1. type
 //   2. regexp pattern matching
-// 	 3. uniqueness if unique is true
+//   3. uniqueness if unique is true
 func (column *Column) CheckValue(seedVal interface{}, model *Model) error {
 	columnLogName := fmt.Sprintf("column[name=\"%s\"]", column.Name)
 	goType := JsonType(column.Type).GoType()

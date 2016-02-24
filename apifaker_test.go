@@ -66,7 +66,7 @@ var usersFixture = []map[string]interface{}{
 func shouldHasJsonResponse(response interface{}, exp ...interface{}) string {
 	if record, ok := response.(*httpmock.Recorder); ok {
 		if !gtester.ResponseEqual(record, exp[0]) {
-			return fmt.Sprintf("Expect: '%v'Actual: '%v", exp[0], record.Body)
+			return fmt.Sprintf("Expect: '%v'\nActual: '%v\n", exp[0], record.Body)
 		}
 	} else {
 		panic("First parameter of shouldHasJsonResponse() must be '*httpmock.Recorder'")
