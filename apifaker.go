@@ -41,7 +41,7 @@ func NewWithApiDir(dir string) (*ApiFaker, error) {
 		Routers: map[string]*Router{},
 	}
 
-	err := gtester.NewCheckQueue().Add(func() error {
+	err := gtester.NewInspector().Check(func() error {
 		return filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
 			if f == nil {
 				return err
@@ -61,16 +61,14 @@ func NewWithApiDir(dir string) (*ApiFaker, error) {
 			}
 			return nil
 		})
-	}).Add(func() error {
+	}).Check(func() error {
 		return faker.CheckUniqueness()
-	}).Add(func() error {
+	}).Check(func() error {
 		return faker.CheckRelationships()
-	}).Run()
-
-	if err == nil {
+	}).Then(func() {
 		faker.setHandlers()
 		faker.setSaveToFileTimer()
-	}
+	})
 
 	return faker, err
 }

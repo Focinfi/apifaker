@@ -20,7 +20,7 @@ const (
 )
 
 // Name returns JsonType string itself
-func (j JsonType) Name() interface{} {
+func (j JsonType) Name() string {
 	return string(j)
 }
 

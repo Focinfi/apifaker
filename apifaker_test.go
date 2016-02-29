@@ -194,7 +194,7 @@ func TestApiFaker(t *testing.T) {
 			It("returns 200 and delete all related resources", func() {
 				Expect(response.Code, ShouldEqual, http.StatusOK)
 				Expect(faker.Routers["users"].Model.Len(), ShouldEqual, 3)
-				Expect(faker.Routers["books"].Model.Set.Len(), ShouldEqual, 1)
+				Expect(faker.Routers["books"].Model.Len(), ShouldEqual, 1)
 				Expect(faker.Routers["books"].Model.Has(float64(2)), ShouldBeTrue)
 				Expect(faker.Routers["avatars"].Model.Len(), ShouldEqual, 0)
 			})
