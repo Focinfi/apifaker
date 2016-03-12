@@ -39,14 +39,14 @@ func NewLineItemWithGinContext(ctx *gin.Context, model *Model) (LineItem, error)
 	return li, nil
 }
 
-// Id returns the float64 of id
-func (li *LineItem) Id() float64 {
-	return li.Element().(float64)
+// ID returns the float64 of id
+func (li *LineItem) ID() float64 {
+	return li.Id().(float64)
 }
 
-// Element returns the value of LineItem's dataMap["id"]
+// Id returns the value of LineItem's dataMap["id"]
 // it will panic if got a nil or a not float64 "id"
-func (li LineItem) Element() interface{} {
+func (li LineItem) Id() interface{} {
 	if id, ok := li.Get("id"); ok {
 		if idFloat64, ok := id.(float64); ok {
 			return idFloat64
@@ -154,7 +154,7 @@ func (li LineItem) DeleteRelatedLis(id float64, model *Model) {
 			for _, li := range rotuer.Model.ToLineItems() {
 				key, ok := li.Get(foreign_key)
 				if ok && key == id {
-					rotuer.Model.Delete(li.Id())
+					rotuer.Model.Delete(li.ID())
 				}
 			}
 		}
@@ -200,7 +200,7 @@ func (lis LineItems) Len() int {
 
 // Len returns comparation of value's of two LineItem's "id"
 func (lis LineItems) Less(i, j int) bool {
-	return lis[i].Id() < lis[j].Id()
+	return lis[i].ID() < lis[j].ID()
 }
 
 // Swap swaps two LineItem

@@ -380,7 +380,7 @@ func (model *Model) initSet() {
 		li := NewLineItemWithMap(seed)
 		model.Set.Add(li)
 		model.addUniqueValues(li)
-		model.updateId(li.Id())
+		model.updateId(li.ID())
 	}
 }
 
