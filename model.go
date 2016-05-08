@@ -59,20 +59,15 @@ func NewModelWithPath(path string, router *Router) (*Model, error) {
 	model := NewModel(router)
 	bytes := []byte{}
 
-	err = gtester.NewInspector().Check(func() error {
-		bytes, err = ioutil.ReadAll(file)
-		return err
-	}).Check(func() error {
-		return json.Unmarshal(bytes, model)
-	}).Check(func() error {
-		return model.CheckRelationshipsMeta()
-	}).Check(func() error {
-		return model.CheckColumnsMeta()
-	}).Check(func() error {
-		return model.ValidateSeedsValue()
-	}).Then(func() {
-		model.initSet()
-	})
+	err = gtester.NewInspector().
+		Check(func() error { bytes, err = ioutil.ReadAll(file); return err }).
+		Check(func() error { return json.Unmarshal(bytes, model) }).
+		Check(model.CheckRelationshipsMeta).
+		Check(model.CheckColumnsMeta).
+		Check(model.ValidateSeedsValue).
+		Then(func() {
+			model.initSet()
+		})
 
 	return model, err
 }

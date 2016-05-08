@@ -1,8 +1,6 @@
 package apifaker
 
 import (
-	"github.com/Focinfi/gtester"
-	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
 	"os"
@@ -11,6 +9,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/Focinfi/gtester"
+	"github.com/gin-gonic/gin"
 )
 
 type ApiFaker struct {
@@ -61,14 +62,13 @@ func NewWithApiDir(dir string) (*ApiFaker, error) {
 			}
 			return nil
 		})
-	}).Check(func() error {
-		return faker.CheckUniqueness()
-	}).Check(func() error {
-		return faker.CheckRelationships()
-	}).Then(func() {
-		faker.setHandlers()
-		faker.setSaveToFileTimer()
-	})
+	}).
+		Check(faker.CheckUniqueness).
+		Check(faker.CheckRelationships).
+		Then(func() {
+			faker.setHandlers()
+			faker.setSaveToFileTimer()
+		})
 
 	return faker, err
 }
