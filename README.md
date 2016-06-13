@@ -4,7 +4,7 @@
 
 If you would like to start a simple json api server for testing front-end, apifaker could be a great fit.
 
-No need of database, just create some json files, and write two line codes, then, everthing is done, you can start implementing the happy(hope so) front-end features.
+No need of database, just create some json files, and write two line codes, then, everything is done, you can start implementing the happy(hope so) front-end features.
 
 [Example project](https://github.com/Focinfi/youzi-server)
 
@@ -146,7 +146,7 @@ And you can use it as a http.Handler to listen and serve on a port:
 http.ListenAndServe(":3000", fakeApi)
 ```
 
-Now almost everthing is done, if we use the above users.json and books.json for the `fakerApi`, then you have a list of restful apis for users and books:
+Now almost everything is done, if we use the above users.json and books.json for the `fakerApi`, then you have a list of restful apis for users and books:
 
 ```shell
 GET    /users                   
